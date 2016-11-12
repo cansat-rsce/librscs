@@ -8,15 +8,15 @@ void rscs_uart_init(rscs_uart_bus_t * bus, int flags)
 {
 	// затираем биты, которые будем настраивать
 	// а именно - включение RXTX и режим многопроцессорной связи, который мы маскируем
-	*bus->USCRA &= ~(1 << MPCM0);
-	*bus->USCRB &= ~((1 << TXEN0) | (1 << RXEN0));
+	*bus->UCSRA &= ~(1 << MPCM0);
+	*bus->UCSRB &= ~((1 << TXEN0) | (1 << RXEN0));
 
 	// теперь активируем RXC TXC согласно настройкам
 	if (flags & RSCS_UART_FLAG_ENABLE_RX)
-		*bus->USCRB |= (1 << RXC0);
+		*bus->UCSRB |= (1 << RXEN0);
 
 	if (flags & RSCS_UART_FLAG_ENABLE_TX)
-		*bus->USCRB |= (1 << TXC0);
+		UCSR0B |= (1 << TXEN0);
 }
 
 
@@ -24,8 +24,8 @@ void rscs_uart_set_character_size(rscs_uart_bus_t * bus, int character_size)
 {
 	// фильтруем некорректные значения
 	// затираем имеющуюся настройку
-	*bus->USCRB &= ~((UCSZ02));
-	*bus->USCRC &= ~((UCSZ01));
+	*bus->UCSRB &= ~((UCSZ02));
+	*bus->UCSRC &= ~((UCSZ01));
 
 	switch (character_size)
 	{
@@ -34,15 +34,15 @@ void rscs_uart_set_character_size(rscs_uart_bus_t * bus, int character_size)
 		break;
 
 	case 6:
-		*bus->USCRC |= (1 << UCSZ00);
+		*bus->UCSRC |= (1 << UCSZ00);
 		break;
 
 	case 7:
-		*bus->USCRC |= (1 << UCSZ01);
+		*bus->UCSRC |= (1 << UCSZ01);
 		break;
 
 	case 8:
-		*bus->USCRC |= (1 << UCSZ00) | (1 << UCSZ01);
+		*bus->UCSRC |= (1 << UCSZ00) | (1 << UCSZ01);
 		break;
 
 	case 9: // 9ка не поддерживается этой версией
@@ -65,7 +65,7 @@ void rscs_uart_set_baudrate(rscs_uart_bus_t * bus, uint32_t baudrate)
 void rscs_uart_set_parity(rscs_uart_bus_t * bus, rscs_uart_parity_t parity)
 {
 	// зануляем текущее значение
-	*bus->USCRC &= ~((1 << UPM00) | (1 << UPM01));
+	*bus->UCSRC &= ~((1 << UPM00) | (1 << UPM01));
 
 	switch(parity)
 	{
@@ -74,11 +74,11 @@ void rscs_uart_set_parity(rscs_uart_bus_t * bus, rscs_uart_parity_t parity)
 		break;
 
 	case RSCS_UART_PARITY_ODD:
-		*bus->USCRC |= (1 << UPM00) | (1 << UPM01);
+		*bus->UCSRC |= (1 << UPM00) | (1 << UPM01);
 		break;
 
 	case RSCS_UART_PARITY_EVEN:
-		*bus->USCRC |= (1 << UPM01);
+		*bus->UCSRC |= (1 << UPM01);
 		break;
 
 	default:
@@ -91,7 +91,7 @@ void rscs_uart_set_parity(rscs_uart_bus_t * bus, rscs_uart_parity_t parity)
 void rscs_uart_set_stop_bits(rscs_uart_bus_t * bus, int stopbits)
 {
 	// зануляем текущую настройку
-	*bus->USCRC &= ~(1 << USBS0);
+	*bus->UCSRC &= ~(1 << USBS0);
 
 	switch (stopbits)
 	{
@@ -99,7 +99,7 @@ void rscs_uart_set_stop_bits(rscs_uart_bus_t * bus, int stopbits)
 		// по нулям
 		break;
 	case 2:
-		*bus->USCRC |= (1 << USBS0);
+		*bus->UCSRC |= (1 << USBS0);
 		break;
 
 	default:
@@ -113,8 +113,11 @@ void rscs_uart_write(rscs_uart_bus_t * bus, const void * dataptr, size_t datasiz
 	const uint8_t * const data = (const uint8_t*)dataptr;
 	for (size_t i = 0; i < datasize; i++)
 	{
-		while (*bus->USCRA & UDRE0) {} // ждем пока буффер не осводобиться
-		*bus->UDR = data[i];
+		while ( !(UCSR0A & (1 << UDRE0)) )
+		{}
+		UDR0 = data[i];
+		//*bus->UDR = data[i];
+		//PORTB ^= (1<<5);
 	}
 }
 
@@ -125,7 +128,7 @@ void rscs_uart_read(rscs_uart_bus_t * bus, void * dataptr, size_t datasize)
 
 	for (size_t i = 0; i < datasize; i++)
 	{
-		while (0 == (*bus->USCRA & TXC0)) {} // ждем пока в буффере что-нибудь не появится
+		while (0 == (*bus->UCSRA & (1 << TXC0))) {} // ждем пока в буффере что-нибудь не появится
 		data[i] = *bus->UDR;
 	}
 }

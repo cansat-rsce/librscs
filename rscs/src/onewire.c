@@ -1,6 +1,6 @@
 #include "../include/rscs/onewire.h"
 
-#include <avr/delay.h>
+#include <util/delay.h>
 
 
 // Статики

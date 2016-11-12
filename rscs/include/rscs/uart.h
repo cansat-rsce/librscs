@@ -9,9 +9,9 @@
 typedef struct
 {
 	volatile uint8_t * const UDR;   // указатель на регистр UDR модуля
-	volatile uint8_t * const USCRA; // указатель на регистр USCRA
-	volatile uint8_t * const USCRB; // указатель на регистр USCRB
-	volatile uint8_t * const USCRC; // указатель на регистр USCRC
+	volatile uint8_t * const UCSRA; // указатель на регистр USCRA
+	volatile uint8_t * const UCSRB; // указатель на регистр USCRB
+	volatile uint8_t * const UCSRC; // указатель на регистр USCRC
 
 	volatile uint8_t * const UBRRL; // указатель на регистр UBRRL
 	volatile uint8_t * const UBRRH; // указатель на регистр UBRRH
