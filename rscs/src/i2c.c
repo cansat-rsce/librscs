@@ -1,8 +1,13 @@
 #include "../include/rscs/i2c.h"
 
-#include <avr/io.h>
-#include <util/delay.h>
 #include <stdbool.h>
+
+#include <avr/io.h>
+
+#include <util/delay.h>
+#include <util/twi.h>
+
+#include "../include/rscs/error.h"
 
 #define I2C_START_TRANSFERED 0x10
 #define I2C_RESTART_TRANSFERED 0x08
@@ -17,31 +22,28 @@
 #define I2C_ARB_LOST 0x38
 
 
-inline static i2c_error_t i2c_status_to_error(uint8_t status)
+inline static int i2c_status_to_error(uint8_t status)
 {
 	switch (status)
 	{
 	case I2C_ARB_LOST:
-		return I2C_arb_lost;
+		return RSCS_E_IO;
 
 	case I2C_SLAW_NO_ACK:
 	case I2C_SLAR_NO_ACK:
-		return I2C_nack_recivied;
-
 	case I2C_WRITE_NO_ACK:
 	case I2C_READ_NO_ACK:
-		return I2C_nack_recivied;
-
+		return RSCS_E_INVRESP;
 	};
 
-	return I2C_wrong_status;
+	return RSCS_E_INVARG;
 }
 
 
 void rscs_i2c_init(rscs_i2c_bus_t * bus)
 {
-	// настраиваем частоту
-	TWBR = (uint8_t)(F_CPU/bus->f_scl - 16)/2/1; // формула из даташита
+	// настраиваем частоту на стандартные 100 кГц
+	rscs_i2c_set_scl_rate(bus, 100000);
 
 	// сбрасываем модуль в исходное состояние
 	rscs_i2c_reset(bus);
@@ -54,11 +56,25 @@ void rscs_i2c_reset(rscs_i2c_bus_t * bus)
 }
 
 
+int rscs_i2c_set_scl_rate(rscs_i2c_bus_t * bus, uint32_t f_scl)
+{
+	TWBR = (uint8_t)(F_CPU/100000 - 16)/2/1; // формула из даташита
+	return RSCS_E_NONE;
+}
+
+
+int rscs_isc_set_timeout(rscs_i2c_bus_t * bus, uint32_t timeout_us)
+{
+	bus->_timeout_us = timeout_us;
+	return RSCS_E_NONE;
+}
+
+
 int rscs_i2c_start(rscs_i2c_bus_t * bus)
 {
 	TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN);
 
-	for(int i = 0; i < bus->timeout_us; i++){
+	for(int i = 0; i < bus->_timeout_us; i++){
 		if (TWCR & (1<<TWINT)) {
 			uint8_t status = TWSR & 0xF8;
 			if (status == I2C_START_TRANSFERED || status == I2C_RESTART_TRANSFERED)	{
@@ -69,7 +85,7 @@ int rscs_i2c_start(rscs_i2c_bus_t * bus)
 			_delay_us(1);
 		}
 	}
-	return I2C_timeout;
+	return RSCS_E_NONE;
 }
 
 
@@ -85,11 +101,11 @@ int rscs_i2c_send_slaw(rscs_i2c_bus_t * bus, uint8_t slave_addr, bool read_acces
 	TWDR = (slave_addr << 1) | read_access;
 	TWCR = (1<<TWINT) | (1<<TWEN);
 
-	for(int i = 0; i < bus->timeout_us; i++ ) {
+	for(int i = 0; i < bus->_timeout_us; i++ ) {
 		if (TWCR & (1<<TWINT)) {
 			uint8_t status = TWSR & 0xF8;
 			if (status == I2C_SLAW_ACK || status == I2C_SLAR_ACK) {
-				return 0;
+				return RSCS_E_NONE;
 			} else {
 				return i2c_status_to_error(status);
 			}
@@ -98,7 +114,7 @@ int rscs_i2c_send_slaw(rscs_i2c_bus_t * bus, uint8_t slave_addr, bool read_acces
 		}
 	}
 
-	return I2C_timeout;
+	return RSCS_E_TIMEOUT;
 }
 
 
@@ -110,7 +126,7 @@ int rscs_i2c_write(rscs_i2c_bus_t * bus, const void * data_ptr, size_t data_size
 		TWCR = (1<<TWINT) | (1<<TWEN);
 
 		bool timeout = true;
-		for(int j = 0; j < bus->timeout_us; j++ ) {
+		for(int j = 0; j < bus->_timeout_us; j++ ) {
 			if (TWCR & (1<<TWINT)) {
 				timeout = false;
 				uint8_t status = TWSR & 0xF8;
@@ -124,10 +140,10 @@ int rscs_i2c_write(rscs_i2c_bus_t * bus, const void * data_ptr, size_t data_size
 			}
 		}
 
-		if(timeout)	return I2C_timeout;
+		if(timeout)	return RSCS_E_TIMEOUT;
 	}
 
-	return 0;
+	return RSCS_E_NONE;
 }
 
 
@@ -143,7 +159,7 @@ int rscs_i2c_read(rscs_i2c_bus_t * bus, void * data_ptr, size_t data_size, bool 
 			TWCR = (1<<TWINT) | (1<<TWEN);
 
 		bool timeout = true;
-		for(int j = 0; j < bus->timeout_us; j++ ) {
+		for(int j = 0; j < bus->_timeout_us; j++ ) {
 			if (TWCR & (1<<TWINT)) {
 				timeout = false;
 				uint8_t status = TWSR & 0xF8;
@@ -157,7 +173,7 @@ int rscs_i2c_read(rscs_i2c_bus_t * bus, void * data_ptr, size_t data_size, bool 
 			}
 		}
 
-		if(timeout)	return I2C_timeout;
+		if(timeout)	return RSCS_E_TIMEOUT;
 		byte_ptr[i] = TWDR;
 	}
 
