@@ -1,5 +1,5 @@
-#ifndef SDCARD_H_
-#define SDCARD_H_
+#ifndef RSCS_SDCARD_H_
+#define RSCS_SDCARD_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -105,4 +105,4 @@ rscs_e rscs_sd_block_write(rscs_sdcard_t  * self, size_t offset, const void * bl
 rscs_e rscs_sd_block_read(rscs_sdcard_t * self, size_t offset, void * block_start, size_t block_count);
 
 
-#endif /* SDCARD_H_ */
+#endif /* RSCS_SDCARD_H_ */

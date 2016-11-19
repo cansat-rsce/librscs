@@ -1,5 +1,5 @@
-#ifndef UART_H_
-#define UART_H_
+#ifndef RSCS_UART_H_
+#define RSCS_UART_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -54,4 +54,4 @@ void rscs_uart_write(rscs_uart_bus_t * bus, const void * dataptr, size_t dataisi
 void rscs_uart_read(rscs_uart_bus_t * bus, void * dataptr, size_t datasize);
 
 
-#endif /* UART_H_ */
+#endif /* RSCS_UART_H_ */

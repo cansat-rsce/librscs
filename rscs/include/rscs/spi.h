@@ -1,5 +1,5 @@
-#ifndef SPI_H_
-#define SPI_H_
+#ifndef RSCS_SPI_H_
+#define RSCS_SPI_H_
 
 #include <stdint.h>
 #include <stddef.h>
@@ -79,4 +79,4 @@ void rscs_spi_exchange(rscs_spi_bus_t * bus, const void * write_buffer, void * r
 
 
 
-#endif /* SPI_H_ */
+#endif /* RSCS_SPI_H_ */

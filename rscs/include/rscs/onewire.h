@@ -92,6 +92,5 @@ void rscs_ow_write_n(rscs_ow_bus_t * bus, const void * buffer, size_t buffersize
 // чтение n байт с OW шины
 void rscs_ow_read_n(rscs_ow_bus_t * bus, void * buffer, size_t buffersize);
 
-// TODO: Реализовать функции
 
 #endif /* RSCS_ONEWIRE_H_ */

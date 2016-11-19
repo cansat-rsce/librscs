@@ -1,7 +1,7 @@
 // Ошибки встречающиеся в библиотеке
 
-#ifndef ERROR_H_
-#define ERROR_H_
+#ifndef RSCS_ERROR_H_
+#define RSCS_ERROR_H_
 
 typedef enum
 {
@@ -14,4 +14,4 @@ typedef enum
 } rscs_e ;
 
 
-#endif /* ERROR_H_ */
+#endif /* RSCS_ERROR_H_ */

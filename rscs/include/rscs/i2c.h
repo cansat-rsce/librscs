@@ -11,8 +11,8 @@
  *
  */
 
-#ifndef I2C_H_
-#define I2C_H_
+#ifndef RSCS_I2C_H_
+#define RSCS_I2C_H_
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -68,4 +68,4 @@ rscs_e rscs_i2c_write(rscs_i2c_bus_t * bus, const void * data_ptr, size_t data_s
    Not ACKnowledge, что означает завершение сеанса чтения. */
 rscs_e rscs_i2c_read(rscs_i2c_bus_t * bus, void * data_ptr, size_t data_size, bool NACK_at_end);
 
-#endif /* I2C_H_ */
+#endif /* RSCS_I2C_H_ */
