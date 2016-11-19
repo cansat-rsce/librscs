@@ -22,7 +22,7 @@
 #define I2C_ARB_LOST 0x38
 
 
-inline static int i2c_status_to_error(uint8_t status)
+inline static rscs_e i2c_status_to_error(uint8_t status)
 {
 	switch (status)
 	{
@@ -43,7 +43,7 @@ inline static int i2c_status_to_error(uint8_t status)
 void rscs_i2c_init(rscs_i2c_bus_t * bus)
 {
 	// настраиваем частоту на стандартные 100 кГц
-	rscs_i2c_set_scl_rate(bus, 100000);
+	rscs_i2c_set_scl_rate(bus, 100);
 
 	// сбрасываем модуль в исходное состояние
 	rscs_i2c_reset(bus);
@@ -56,21 +56,19 @@ void rscs_i2c_reset(rscs_i2c_bus_t * bus)
 }
 
 
-int rscs_i2c_set_scl_rate(rscs_i2c_bus_t * bus, uint32_t f_scl)
+void rscs_i2c_set_scl_rate(rscs_i2c_bus_t * bus, uint32_t f_scl_kHz)
 {
-	TWBR = (uint8_t)(F_CPU/100000 - 16)/2/1; // формула из даташита
-	return RSCS_E_NONE;
+	TWBR = (uint8_t)(F_CPU/(f_scl_kHz*1000) - 16)/2/1; // формула из даташита
 }
 
 
-int rscs_isc_set_timeout(rscs_i2c_bus_t * bus, uint32_t timeout_us)
+void rscs_isc_set_timeout(rscs_i2c_bus_t * bus, uint32_t timeout_us)
 {
 	bus->_timeout_us = timeout_us;
-	return RSCS_E_NONE;
 }
 
 
-int rscs_i2c_start(rscs_i2c_bus_t * bus)
+rscs_e rscs_i2c_start(rscs_i2c_bus_t * bus)
 {
 	TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN);
 
@@ -89,14 +87,14 @@ int rscs_i2c_start(rscs_i2c_bus_t * bus)
 }
 
 
-int rscs_i2c_stop(rscs_i2c_bus_t * bus)
+rscs_e rscs_i2c_stop(rscs_i2c_bus_t * bus)
 {
 	TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWSTO);
 	return 0;
 }
 
 
-int rscs_i2c_send_slaw(rscs_i2c_bus_t * bus, uint8_t slave_addr, bool read_access)
+rscs_e rscs_i2c_send_slaw(rscs_i2c_bus_t * bus, uint8_t slave_addr, bool read_access)
 {
 	TWDR = (slave_addr << 1) | read_access;
 	TWCR = (1<<TWINT) | (1<<TWEN);
@@ -118,7 +116,7 @@ int rscs_i2c_send_slaw(rscs_i2c_bus_t * bus, uint8_t slave_addr, bool read_acces
 }
 
 
-int rscs_i2c_write(rscs_i2c_bus_t * bus, const void * data_ptr, size_t data_size)
+rscs_e rscs_i2c_write(rscs_i2c_bus_t * bus, const void * data_ptr, size_t data_size)
 {
 	const uint8_t * byte_ptr = (const uint8_t * )data_ptr;
 	for(int i = 0; i < data_size; i++){
@@ -147,7 +145,7 @@ int rscs_i2c_write(rscs_i2c_bus_t * bus, const void * data_ptr, size_t data_size
 }
 
 
-int rscs_i2c_read(rscs_i2c_bus_t * bus, void * data_ptr, size_t data_size, bool NACK_at_end)
+rscs_e rscs_i2c_read(rscs_i2c_bus_t * bus, void * data_ptr, size_t data_size, bool NACK_at_end)
 {
 	uint8_t * byte_ptr = (uint8_t * )data_ptr;
 
@@ -177,6 +175,6 @@ int rscs_i2c_read(rscs_i2c_bus_t * bus, void * data_ptr, size_t data_size, bool 
 		byte_ptr[i] = TWDR;
 	}
 
-	return 0;
+	return RSCS_E_NONE;
 }
 

@@ -1,0 +1,155 @@
+#include "../include/rscs/spi.h"
+
+#include <stdlib.h>
+#include "platform.h"
+
+// для удобства - локальная инлайновая функция
+inline static uint8_t spi_do_inline(uint8_t value)
+{
+	SPDR = value;
+	while(!(SPSR & (1<<SPIF)));
+	return SPDR;
+}
+
+
+
+
+void rscs_spi_init(rscs_spi_bus_t * bus)
+{
+	(void)bus; // не используется на атмеге
+
+	/*настройка портов ввода-вывода: все на вывод, кроме MISO */
+	RSCS_SPI_DDRX  |=
+			(1 << RSCS_SPI_MOSI) | (1 << RSCS_SPI_SCK) | (1 << RSCS_SPI_SS) | (0 << RSCS_SPI_MISO);
+	RSCS_SPI_PORTX |=
+			(1 << RSCS_SPI_MOSI) | (1 << RSCS_SPI_SCK) | (1 << RSCS_SPI_SS) | (1 << RSCS_SPI_MISO);
+
+	/*разрешение spi,старший бит вперед,мастер, режим 0*/
+	SPCR = (1 << SPE) | (1 << MSTR);
+	// SPSR = (0<<SPI2X);
+}
+
+
+void rscs_spi_set_clk(rscs_spi_bus_t * bus, uint32_t clock_kHz)
+{
+	// зануляем все биты, управляющие частотой
+	// будем расставлять единицы где это необходимо
+	SPCR &= ~((1 << SPR0) | (1 << SPR1));
+	SPSR &= ~(1 << SPI2X);
+
+	const uint8_t divisor = F_CPU/clock_kHz;
+
+	// начинаем с самого быстрого варианта
+	// и проверяя все диапазоны округляем до меньшего делителя
+	if (divisor <= 2) // к сожалению мы не можем установить меньший делитель
+	{
+		SPSR |= (1 << SPI2X);
+	}
+	else if (divisor <= 4) // но больше 2
+	{
+		// все по нулям
+	}
+	else if (divisor <= 8) // но больше 4
+	{
+		SPCR |= (1 << SPR0);
+		SPSR |= (1 << SPI2X);
+	}
+	else if (divisor <= 16) // но больше 8
+	{
+		SPCR |= (1 << SPR0);
+	}
+	else if (divisor <= 32) // но больше 16
+	{
+		SPCR |= (1 << SPR1);
+		SPSR |= (1 << SPI2X);
+	}
+	else if (divisor <= 64) // но больше 32
+	{
+		SPCR |= (1 << SPR1) | (1 << SPR0);
+		SPSR |= (1 << SPI2X);
+	}
+	else if (divisor <= 128) // но больше 64
+	{
+		SPCR |= (1 << SPR1) | (1 << SPR0);
+	}
+	else // мы не может быть настолько медленными
+	{
+		abort();
+	}
+}
+
+
+void rscs_spi_set_pol(rscs_spi_bus_t * bus, rscs_spi_polarity_t polarity)
+{
+	SPCR &= ~((1 << CPOL) | (1 << CPHA));
+
+	switch(polarity)
+	{
+	case RSCS_SPI_POL_SAMPLE_RISE_SETUP_FALL:
+		SPSR |= (0 << CPOL) | (0 << CPHA);
+		break;
+	case RSCS_SPI_POL_SETUP_RISE_SAMPLE_FALL:
+		SPSR |= (0 << CPOL) | (1 << CPHA);
+		break;
+	case RSCS_SPI_POL_SAMPLE_FALL_SETUP_RISE:
+		SPSR |= (1 << CPOL) | (0 << CPHA);
+		break;
+	case RSCS_SPI_POL_SETUP_FALL_SAMPLE_RISE:
+		SPSR |= (1 << CPOL) | (1 << CPHA);
+		break;
+	default:
+		abort();
+	};
+}
+
+
+void rscs_spi_set_order(rscs_spi_bus_t * bus, rscs_spi_order_t order)
+{
+	SPCR &= ~(1 << DORD);
+
+	switch(order)
+	{
+	case RSCS_SPI_ORDER_LSB_FIRST:
+		SPCR |= (1 << DORD);
+		break;
+	case RSCS_SPI_ORDER_MSB_FIRST:
+		SPCR |= (0 << DORD);
+		break;
+	default:
+		abort();
+	};
+}
+
+uint8_t rscs_spi_do(rscs_spi_bus_t * bus, uint8_t value)
+{
+	(void)bus; // не используется на атмеге
+
+	return spi_do_inline(value);
+}
+
+
+void rscs_spi_read(rscs_spi_bus_t * bus, void * read_buffer, size_t buffer_size, uint8_t dummy)
+{
+	(void)bus; // не используется на атмеге
+
+	for (size_t i = 0; i < buffer_size; i++)
+		((uint8_t*)read_buffer)[i] = spi_do_inline(dummy);
+}
+
+
+void rscs_spi_write(rscs_spi_bus_t * bus, const void * write_buffer, size_t buffer_size)
+{
+	(void)bus; // не используется на атмеге
+
+	for (size_t i = 0; i < buffer_size; i++)
+		spi_do_inline(((const uint8_t*)write_buffer)[i]);
+}
+
+
+void rscs_spi_exchange(rscs_spi_bus_t * bus, const void * write_buffer, void * read_buffer, size_t buffers_size)
+{
+	(void)bus; // не используется на атмеге
+
+	for (size_t i = 0; i < buffers_size; i++)
+		((uint8_t*)read_buffer)[i] = spi_do_inline(((const uint8_t*)write_buffer)[i]);
+}
