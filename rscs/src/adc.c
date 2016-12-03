@@ -7,46 +7,60 @@
 
 adc_descriptor_t current_channel;
 
-ISR (ADC_vect) {
-	* (current_channel.result_pointer) = ADC;
-}
+bool convertion_started = false;
 
 bool adc_internal_needinit = true;
 
-rscs_e adc_internal_init(adc_descriptor_t descriptor){
+rscs_e adc_internal_init(adc_descriptor_t * descriptor_p){
 
 	if(adc_internal_needinit){
 			ADMUX = (1 << REFS0) | (0 << REFS1) // опорное напряжение на AVCC
 				| (0 << ADLAR) // Левосторонний формат результата
 			;
-			ADCSRA = (1 << ADEN) | (0 << ADSC) | (1 << ADIE) |
-					descriptor.prescaler;
+			ADCSRA = (1 << ADEN) | (0 << ADSC) | (0 << ADIE) |
+					descriptor_p->prescaler;
 			adc_internal_needinit = false;
 	}
 
 	return RSCS_E_NONE;
 }
 
-//Результат измерения будет помещён в переменную, указанную в дескрипторе
-//Вернёт RSCS_E_TIMEOUT если ADC занят
-rscs_e adc_internal_read(adc_descriptor_t descriptor){
+//Результат измерения может быть получен с помощью descriptor->getResult
+rscs_e adc_internal_startConversion(adc_descriptor_t * descriptor_p){
 
 	if(!(ADCSRA & (1 << ADSC))) {
 
 		ADMUX &= ~((1 << MUX0) | (1 << MUX1) | (1 << MUX2) | (1 << MUX3));
 
-		ADMUX |= descriptor.channel;
+		ADMUX |= descriptor_p->channel;
 
 		ADCSRA |= (1 << ADSC);
 
-		current_channel = descriptor;
+		convertion_started = true;
+
+		current_channel = *descriptor_p;
 
 		return RSCS_E_NONE;
 	}
 
 	else {
-		return RSCS_E_TIMEOUT;
+		return RSCS_E_BUSY;
 	}
+}
+
+/*Вернёт RSCS_E_BUSY, если результат измерения не готов
+Вернёт RSCS_E_INVARG, если канал, для которого есть результат, не соответствует
+каналу, указанному в дескрипторе, а также если нет нового результата*/
+int32_t adc_internal_getResult(adc_descriptor_t * descriptor_p) {
+
+	if(!convertion_started) return RSCS_E_INVARG;
+
+	if(!(ADCSRA & (1 << ADIF))) return RSCS_E_BUSY;
+
+	if(descriptor_p->channel != current_channel.channel) return RSCS_E_INVARG;
+
+	convertion_started = false;
+	return ADC;
 }
 
 void adc_descriptor_init(adc_descriptor_t * descriptor_p){
@@ -54,6 +68,7 @@ void adc_descriptor_init(adc_descriptor_t * descriptor_p){
 	if(!(descriptor_p->channel > ADC_INTERNAL_HIGHEND)) {
 
 		descriptor_p->init = adc_internal_init;
-		descriptor_p->read = adc_internal_read;
+		descriptor_p->startConversion = adc_internal_startConversion;
+		descriptor_p->getResult = adc_internal_getResult;
 	}
 }

@@ -63,18 +63,21 @@ typedef enum {
 	ADC_PRESCALER_128 = 7
 } adc_prescaler;
 
-typedef struct {
-	rscs_e (*init) (adc_descriptor_t);
-	rscs_e (*read) (adc_descriptor_t);
+
+typedef struct adc_descriptor_t adc_descriptor_t;
+struct adc_descriptor_t{
+	rscs_e (*init) (adc_descriptor_t *);
+	rscs_e (*startConversion) (adc_descriptor_t *);
+	int32_t (*getResult) (adc_descriptor_t *);
 	adc_prescaler prescaler;
 	adc_channel channel;
-	uint16_t * result_pointer;
 
-} adc_descriptor_t;
+};
 
-void adc_deskriptor_init(adc_descriptor_t * descriptor_p);
+void adc_descriptor_init(adc_descriptor_t * descriptor_p);
 
-rscs_e adc_internal_init(adc_descriptor_t descriptor);
-rscs_e adc_internal_read(adc_descriptor_t descriptor);
+rscs_e adc_internal_init(adc_descriptor_t * descriptor_p);
+rscs_e adc_internal_startConversion(adc_descriptor_t * descriptor_p);
+int32_t adc_internal_getResult(adc_descriptor_t * descriptor_p);
 
 #endif /* ADC_H_ */
