@@ -25,7 +25,6 @@ rscs_e adc_internal_init(adc_descriptor_t * descriptor_p){
 	return RSCS_E_NONE;
 }
 
-//Результат измерения может быть получен с помощью descriptor->getResult
 rscs_e adc_internal_startConversion(adc_descriptor_t * descriptor_p){
 
 	if(!(ADCSRA & (1 << ADSC))) {
@@ -48,9 +47,6 @@ rscs_e adc_internal_startConversion(adc_descriptor_t * descriptor_p){
 	}
 }
 
-/*Вернёт RSCS_E_BUSY, если результат измерения не готов
-Вернёт RSCS_E_INVARG, если канал, для которого есть результат, не соответствует
-каналу, указанному в дескрипторе, а также если нет нового результата*/
 int32_t adc_internal_getResult(adc_descriptor_t * descriptor_p) {
 
 	if(!convertion_started) return RSCS_E_INVARG;

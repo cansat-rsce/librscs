@@ -4,10 +4,10 @@
 #include "error.h"
 
 
-//Идентификатор каналов
-//Волшебные числа _ то, что надо записать в ADMUX для включения канала
+/*Идентификаторы каналов
+ * Волшебные числа _ то, что надо записать в ADMUX для включения канала*/
 typedef enum {
-
+	//Одиночные каналы
 	ADC_SINGLE_0 		= 0,
 	ADC_SINGLE_1 		= 1,
 	ADC_SINGLE_2 		= 2,
@@ -17,6 +17,8 @@ typedef enum {
 	ADC_SINGLE_6 		= 6,
 	ADC_SINGLE_7 		= 7,
 #ifdef __AVR_ATmega128__
+	/*Дифференциальны каналы
+	 * (названия вида ADC_DIFF_положительныйканал_отрицательныйканал_множитель)*/
 	ADC_DIFF_0_0_10X	= 8,
 	ADC_DIFF_1_0_10X	= 9,
 	ADC_DIFF_0_0_200X	= 10,
@@ -43,16 +45,19 @@ typedef enum {
 
 } adc_channel;
 
+
+//Определение верхней границы индексов каналов внутреннего АЦП
 #ifdef __AVR_ATmega128__
 
 #define ADC_INTERNAL_HIGHEND ADC_DIFF_4_2_1X
 
 #elif defined __AVR_ATmega328P__
 
-#define ADC_INTERNAL_HIGHEND
+#define ADC_INTERNAL_HIGHEND ADC_SINGLE_7
 
 #endif
 
+//Перечисление предделителей АЦП
 typedef enum {
 	ADC_PRESCALER_2 = 1,
 	ADC_PRESCALER_4 = 2,
@@ -63,21 +68,36 @@ typedef enum {
 	ADC_PRESCALER_128 = 7
 } adc_prescaler;
 
-
+//Дескриптор АЦП
 typedef struct adc_descriptor_t adc_descriptor_t;
 struct adc_descriptor_t{
-	rscs_e (*init) (adc_descriptor_t *);
-	rscs_e (*startConversion) (adc_descriptor_t *);
-	int32_t (*getResult) (adc_descriptor_t *);
-	adc_prescaler prescaler;
-	adc_channel channel;
+	rscs_e (*init) (adc_descriptor_t *);//Указатель на функцию инициализации АЦП
+	rscs_e (*startConversion) (adc_descriptor_t *);//Указатель на функцию начала измерения
+	int32_t (*getResult) (adc_descriptor_t *);//Указатель на функцию начала измерения
+	adc_prescaler prescaler;//Предделитель
+	adc_channel channel;//Канал измерения
 
 };
 
+/*Служит для заполнения функций в дескрипторе, перед вызовом функции нужно в
+ * передаваемом дескрипторе заполнить поле канала.
+ * Для внутреннего АЦП подберёт adc_internal_init(), adc_internal_startConversion
+ * и adc_internal_getResult*/
 void adc_descriptor_init(adc_descriptor_t * descriptor_p);
 
+/*Функция для инициализации внутреннего АЦП. Нужно вызвать минимум один раз,
+ * неоднократный вызов не запрещён*/
 rscs_e adc_internal_init(adc_descriptor_t * descriptor_p);
+
+/*Функция для начала измерения на внутреннем ацп. Результат можно получить с помощью
+ * getResult() в дескрипторе*/
 rscs_e adc_internal_startConversion(adc_descriptor_t * descriptor_p);
+
+/*Функция для получения результатов с внутреннего АЦП. Возвращает результат или
+ * код ошибки:
+ * Вернёт RSCS_E_BUSY, если результат измерения не готов
+ * Вернёт RSCS_E_INVARG, если канал, для которого есть результат, не соответствует
+ * каналу, указанному в дескрипторе, а также если нет нового результата*/
 int32_t adc_internal_getResult(adc_descriptor_t * descriptor_p);
 
 #endif /* ADC_H_ */
