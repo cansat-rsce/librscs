@@ -2,6 +2,7 @@
 #define ADC_H_
 
 #include "error.h"
+#include "stdint.h"
 
 
 /*Идентификаторы каналов
@@ -71,16 +72,17 @@ typedef enum {
 //Дескриптор АЦП
 typedef struct adc_descriptor_t adc_descriptor_t;
 struct adc_descriptor_t{
-	rscs_e (*init) (adc_descriptor_t *);//Указатель на функцию инициализации АЦП
-	rscs_e (*startConversion) (adc_descriptor_t *);//Указатель на функцию начала измерения
-	int32_t (*getResult) (adc_descriptor_t *);//Указатель на функцию начала измерения
-	adc_prescaler prescaler;//Предделитель
-	adc_channel channel;//Канал измерения
+	volatile rscs_e (*init) (adc_descriptor_t *);//Указатель на функцию инициализации АЦП
+	volatile rscs_e (*startConversion) (adc_descriptor_t *);//Указатель на функцию начала измерения
+	volatile int32_t (*getResult) (adc_descriptor_t *);//Указатель на функцию начала измерения
+
+	volatile adc_prescaler prescaler;//Предделитель
+	volatile adc_channel channel;//Канал измерения
 
 };
 
 /*Служит для заполнения функций в дескрипторе, перед вызовом функции нужно в
- * передаваемом дескрипторе заполнить поле канала.
+ * передаваемом дескрипторе заполнить поля канала и предделителя.
  * Для внутреннего АЦП подберёт adc_internal_init(), adc_internal_startConversion
  * и adc_internal_getResult*/
 void adc_descriptor_init(adc_descriptor_t * descriptor_p);
