@@ -20,6 +20,8 @@
 
 #include "error.h"
 
+typedef uint8_t i2c_addr_t;
+
 // Дескриптор шины
 typedef struct
 {
