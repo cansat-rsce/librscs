@@ -3,9 +3,10 @@
 
 #include "i2c.h"
 
-#define BMP280_ADDR_LOW 0xEC
-#define BMP280_ADDR_HIGH 0xEE
+#define RSCS_BMP280_ADDR_LOW 0xEC //Когда пин адреса к земле
+#define RSCS_BMP280_ADDR_HIGH 0xEE //Когда пин адреса к 5v
 
+typedef double rscs_bmp280_fp_t;
 
 //Количество измерений на один результат. Выставляется отдельно для термометра и барометра
 typedef enum {
@@ -38,6 +39,7 @@ typedef enum {
 	RSCS_BMP280_MODE_NORMAL	= 3,
 } rscs_bmp280_mode_t;
 
+//Режимы фильтрованных измерений (см. даташит)
 typedef enum {
 	RSCS_BMP280_FILTER_OFF 	= 0,
 	RSCS_BMP280_FILTER_X2 	= 2,
@@ -51,29 +53,54 @@ typedef struct {
 	uint16_t T[3], P[9];
 } rscs_bmp280_calibration_values_t;
 
-/*Дескриптор датчика. Все поля, кроме mode, заполняются пользователем в самом дескрипторе
+/*Параметры датчика. Все поля, кроме mode, заполняются пользователем в самой структуре
  *перед вызовом rscs_bmp280_init()
  *Поле mode заполняется rscs_bmp280_changemode()*/
 typedef struct {
-	rscs_i2c_bus_t i2c;
-	i2c_addr_t address;
+	// Режим префильтрации измерений давления
 	rscs_bmp280_oversampling_t pressure_oversampling;
+	// Режим префильтрации измерений температуры
 	rscs_bmp280_oversampling_t temperature_oversampling;
+	// Период непрерывных измерений
 	rscs_bmp280_standbytime_t standbytyme;
+	// Режим фильтрации
 	rscs_bmp280_filter_t filter;
-	rscs_bmp280_mode_t mode;
-	rscs_bmp280_calibration_values_t calibration_values;
-	double * pressure, temperature;
+} rscs_bmp280_parameters_t;
 
-} rscs_bmp280_descriptor_t;
+struct rscs_bmp280_descriptor;
 
-//Инилиализация датчика
-rscs_e rscs_bmp280_init(rscs_bmp280_descriptor_t * bmp);
+typedef struct rscs_bmp280_descriptor rscs_bmp280_descriptor_t;
+
+typedef struct {
+	uint32_t rawpress, //Сырые данные давления
+	rawtemp; //Сырые данные температуры
+} rscs_bmp280_rawdata_t;
+
+// Создание дескриптора датчика
+// Не инициализирует сам датчик.
+rscs_bmp280_descriptor_t * rscs_bmp280_init(void);
+
+// Освобождние дескритора датчика
+void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr);
+
+// Инилиализация датчика
+// загрузка калибровочных коээфициентов и передача параметров конфигурации
+void rscs_bmp280_setup(const rscs_bmp280_parameters_t * params);
+
+// Возвращает указатель не текущую конфигурацию датчика
+/* Подразумвается сохраненная на МК копия конфигурации, а не та, что
+   хранится в самом датчике. Указатель действителен до тех пор, пока не будет
+   вызвана rscs_bmp280_deinit для этого дескриптора */
+const rscs_bmp280_parameters_t * rscs_bmp280_get_config(rscs_bmp280_descriptor_t * descr);
 
 //Изменение режима работы. Для начала одиночного измерения преведите в FORCE режим
-rscs_e rscs_bmp280_changemode(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_mode mode);
+rscs_e rscs_bmp280_changemode(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_mode_t mode);
 
-//Чтение данных из BMP с последующими рассчётами значений и записью по указателям в дескрипторе
-rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp);
+//Чтение данных из BMP(в сыром виде)
+rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_rawdata_t * data_p);
+
+//Рассчёт давления и температуры из сырых значений.
+//WARNING: на ATMega очень медленно и неточно, лучше считать на земле
+void rscs_bmp280_calculate(rscs_bmp280_rawdata_t raw, rscs_bmp280_fp_t * press_p, rscs_bmp280_fp_t * temp_p);
 
 #endif /* BMP280_H_ */
