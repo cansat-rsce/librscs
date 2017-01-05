@@ -1,43 +1,42 @@
+#include <stdlib.h>
+#include <stdbool.h>
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <stdbool.h>
 
 #include "../include/rscs/adc.h"
 #include "../include/rscs/error.h"
 
-adc_descriptor_t current_channel;
+static bool _adc_internal_needinit = true;
+static rscs_adc_channel_t _current_channel = -1;
 
-bool convertion_started = false;
+void rscs_adc_init(){
 
-bool adc_internal_needinit = true;
-
-rscs_e adc_internal_init(adc_descriptor_t * descriptor_p){
-
-	if(adc_internal_needinit){
-			ADMUX = (1 << REFS0) | (0 << REFS1) // опорное напряжение на AVCC
+	if(_adc_internal_needinit){
+			ADMUX = (RSCS_ADC_REF_EXTERNAL_VCC << REFS0) // опорное напряжение на AVCC
 				| (0 << ADLAR) // Левосторонний формат результата
 			;
 			ADCSRA = (1 << ADEN) | (0 << ADSC) | (0 << ADIE) |
-					descriptor_p->prescaler;
-			adc_internal_needinit = false;
+#ifdef __AVR_ATmega128__
+					RSCS_ADC_PRESCALER_64;
+#elif defined __AVR_ATmega328P__
+					RSCS_ADC_PRESCALER_128;
+#endif
+			_adc_internal_needinit = false;
 	}
-
-	return RSCS_E_NONE;
 }
 
-rscs_e adc_internal_startConversion(adc_descriptor_t * descriptor_p){
+rscs_e rscs_adc_start_conversion(rscs_adc_channel_t channel){
 
 	if(!(ADCSRA & (1 << ADSC))) {
 
 		ADMUX &= ~((1 << MUX0) | (1 << MUX1) | (1 << MUX2) | (1 << MUX3));
 
-		ADMUX |= descriptor_p->channel;
+		ADMUX |= channel;
 
 		ADCSRA |= (1 << ADSC);
 
-		convertion_started = true;
-
-		current_channel = *descriptor_p;
+		_current_channel = channel;
 
 		return RSCS_E_NONE;
 	}
@@ -47,24 +46,31 @@ rscs_e adc_internal_startConversion(adc_descriptor_t * descriptor_p){
 	}
 }
 
-int32_t adc_internal_getResult(adc_descriptor_t * descriptor_p) {
+void rscs_adc_set_refrence(rscs_adc_ref_t ref){
+	ADMUX &= ~(1 << REFS0) | (1 << REFS1);
 
-	if(!convertion_started) return RSCS_E_INVARG;
+	ADMUX |= (ref << REFS0);
+}
+
+void rscs_adc_set_prescaler(rscs_adc_prescaler_t presc){
+	ADCSRA &= ~((1 << ADPS0)|(1 << ADPS1)|(1 << ADPS2));
+
+	ADCSRA |= presc;
+}
+
+void rscs_adc_set_mode(rscs_adc_mode_t mode){
+	ADCSRA &= ~(1 << ADFR);
+
+	ADCSRA |= (mode << ADFR);
+}
+
+rscs_e rscs_adc_get_result(int32_t * value_ptr, rscs_adc_channel_t channel) {
 
 	if(!(ADCSRA & (1 << ADIF))) return RSCS_E_BUSY;
 
-	if(descriptor_p->channel != current_channel.channel) return RSCS_E_INVARG;
+	if(channel != _current_channel) return RSCS_E_INVARG;
 
-	convertion_started = false;
-	return ADC;
-}
+	*value_ptr = ADC;
 
-void adc_descriptor_init(adc_descriptor_t * descriptor_p){
-
-	if(!(descriptor_p->channel > ADC_INTERNAL_HIGHEND)) {
-
-		descriptor_p->init = adc_internal_init;
-		descriptor_p->startConversion = adc_internal_startConversion;
-		descriptor_p->getResult = adc_internal_getResult;
-	}
+	return RSCS_E_NONE;
 }

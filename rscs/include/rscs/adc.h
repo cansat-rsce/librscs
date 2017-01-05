@@ -4,102 +4,102 @@
 #include "error.h"
 #include "stdint.h"
 
-
-/*Идентификаторы каналов
- * Волшебные числа _ то, что надо записать в ADMUX для включения канала*/
+/*! Идентификаторы каналов
+    Волшебные числа _ то, что надо записать в ADMUX для включения канала*/
 typedef enum {
 	//Одиночные каналы
-	ADC_SINGLE_0 		= 0,
-	ADC_SINGLE_1 		= 1,
-	ADC_SINGLE_2 		= 2,
-	ADC_SINGLE_3 		= 3,
-	ADC_SINGLE_4 		= 4,
-	ADC_SINGLE_5 		= 5,
-	ADC_SINGLE_6 		= 6,
-	ADC_SINGLE_7 		= 7,
+	RSCS_ADC_SINGLE_0 		= 0,
+	RSCS_ADC_SINGLE_1 		= 1,
+	RSCS_ADC_SINGLE_2 		= 2,
+	RSCS_ADC_SINGLE_3 		= 3,
+	RSCS_ADC_SINGLE_4 		= 4,
+	RSCS_ADC_SINGLE_5 		= 5,
+	RSCS_ADC_SINGLE_6 		= 6,
+	RSCS_ADC_SINGLE_7 		= 7,
 #ifdef __AVR_ATmega128__
 	/*Дифференциальны каналы
 	 * (названия вида ADC_DIFF_положительныйканал_отрицательныйканал_множитель)*/
-	ADC_DIFF_0_0_10X	= 8,
-	ADC_DIFF_1_0_10X	= 9,
-	ADC_DIFF_0_0_200X	= 10,
-	ADC_DIFF_1_0_200X	= 11,
-	ADC_DIFF_2_2_10X	= 12,
-	ADC_DIFF_3_2_10X	= 13,
-	ADC_DIFF_2_2_200X	= 14,
-	ADC_DIFF_3_2_200X	= 15,
-	ADC_DIFF_0_1_1X		= 16,
-	ADC_DIFF_1_1_1X		= 17,
-	ADC_DIFF_2_1_1X		= 18,
-	ADC_DIFF_3_1_1X		= 19,
-	ADC_DIFF_4_1_1X		= 20,
-	ADC_DIFF_5_1_1X		= 21,
-	ADC_DIFF_6_1_1X		= 22,
-	ADC_DIFF_7_1_1X		= 23,
-	ADC_DIFF_0_2_1X		= 24,
-	ADC_DIFF_1_2_1X		= 25,
-	ADC_DIFF_2_2_1X		= 26,
-	ADC_DIFF_3_2_1X		= 27,
-	ADC_DIFF_4_2_1X		= 28
-
+	RSCS_ADC_DIFF_0_0_10X		= 8,
+	RSCS_ADC_DIFF_1_0_10X		= 9,
+	RSCS_ADC_DIFF_0_0_200X		= 10,
+	RSCS_ADC_DIFF_1_0_200X		= 11,
+	RSCS_ADC_DIFF_2_2_10X		= 12,
+	RSCS_ADC_DIFF_3_2_10X		= 13,
+	RSCS_ADC_DIFF_2_2_200X		= 14,
+	RSCS_ADC_DIFF_3_2_200X		= 15,
+	RSCS_ADC_DIFF_0_1_1X		= 16,
+	RSCS_ADC_DIFF_1_1_1X		= 17,
+	RSCS_ADC_DIFF_2_1_1X		= 18,
+	RSCS_ADC_DIFF_3_1_1X		= 19,
+	RSCS_ADC_DIFF_4_1_1X		= 20,
+	RSCS_ADC_DIFF_5_1_1X		= 21,
+	RSCS_ADC_DIFF_6_1_1X		= 22,
+	RSCS_ADC_DIFF_7_1_1X		= 23,
+	RSCS_ADC_DIFF_0_2_1X		= 24,
+	RSCS_ADC_DIFF_1_2_1X		= 25,
+	RSCS_ADC_DIFF_2_2_1X		= 26,
+	RSCS_ADC_DIFF_3_2_1X		= 27,
+	RSCS_ADC_DIFF_4_2_1X		= 28
 #endif
 
-} adc_channel;
+} rscs_adc_channel_t;
 
-
-//Определение верхней границы индексов каналов внутреннего АЦП
-#ifdef __AVR_ATmega128__
-
-#define ADC_INTERNAL_HIGHEND ADC_DIFF_4_2_1X
-
-#elif defined __AVR_ATmega328P__
-
-#define ADC_INTERNAL_HIGHEND ADC_SINGLE_7
-
-#endif
-
-//Перечисление предделителей АЦП
+//! Перечисление предделителей АЦП
 typedef enum {
-	ADC_PRESCALER_2 = 1,
-	ADC_PRESCALER_4 = 2,
-	ADC_PRESCALER_8 = 3,
-	ADC_PRESCALER_16 = 4,
-	ADC_PRESCALER_32 = 5,
-	ADC_PRESCALER_64 = 6,
-	ADC_PRESCALER_128 = 7
-} adc_prescaler;
+	RSCS_ADC_PRESCALER_2 	= 1,
+	RSCS_ADC_PRESCALER_4 	= 2,
+	RSCS_ADC_PRESCALER_8 	= 3,
+	RSCS_ADC_PRESCALER_16 	= 4,
+	RSCS_ADC_PRESCALER_32 	= 5,
+	RSCS_ADC_PRESCALER_64 	= 6,
+	RSCS_ADC_PRESCALER_128 	= 7
+} rscs_adc_prescaler_t;
 
-//Дескриптор АЦП
-typedef struct adc_descriptor_t adc_descriptor_t;
-struct adc_descriptor_t{
-	volatile rscs_e (*init) (adc_descriptor_t *);//Указатель на функцию инициализации АЦП
-	volatile rscs_e (*startConversion) (adc_descriptor_t *);//Указатель на функцию начала измерения
-	volatile int32_t (*getResult) (adc_descriptor_t *);//Указатель на функцию начала измерения
+//! Опорные напряжения АЦП
+typedef enum {
+	//! Внешний пин AREF (нельзя использовать на конструкторе)
+	RSCS_ADC_REF_EXTERNAL_AREF	= 0,
+	//! Напряжение питания, требуется конденсатор на AREF (есть на конструкторе)
+	RSCS_ADC_REF_EXTERNAL_VCC	= 1,
+	//! Внутренний источник на 2.56 вольта. Требуется конденсатор на AREF (есть на конструкторе)
+	RSCS_ADC_REF_INTERNAL_2DOT56= 3,
+} rscs_adc_ref_t;
 
-	volatile adc_prescaler prescaler;//Предделитель
-	volatile adc_channel channel;//Канал измерения
+//! Режим работы АЦП - непрерывный или одиночный
+typedef enum {
+	RSCS_ADC_MODE_SINGLE 	= 0, 		//!< Одиночный
+	RSCS_ADC_MODE_CONTINIOUS= 1,	//!< Непрерывный
+} rscs_adc_mode_t;
 
-};
 
-/*Служит для заполнения функций в дескрипторе, перед вызовом функции нужно в
- * передаваемом дескрипторе заполнить поля канала и предделителя.
- * Для внутреннего АЦП подберёт adc_internal_init(), adc_internal_startConversion
- * и adc_internal_getResult*/
-void adc_descriptor_init(adc_descriptor_t * descriptor_p);
+//! Инициализация АЦП
+/*! Параметры по-умолчанию:
+    - опорное напряжеие - RSCS_ADC_REF_EXTERNAL_VCC
+    - предделитель - 64 на 8МГц, 128 на 16МГц
+    - режим - одиночный
+    */
+void rscs_adc_init();
 
-/*Функция для инициализации внутреннего АЦП. Нужно вызвать минимум один раз,
- * неоднократный вызов не запрещён*/
-rscs_e adc_internal_init(adc_descriptor_t * descriptor_p);
+//! Установка опорного напряжения
+// 	от изменения значений до их применения может пройти некоторое время(см. даташит)
+void rscs_adc_set_refrence(rscs_adc_ref_t ref);
 
-/*Функция для начала измерения на внутреннем ацп. Результат можно получить с помощью
- * getResult() в дескрипторе*/
-rscs_e adc_internal_startConversion(adc_descriptor_t * descriptor_p);
+//! Установка предделителя.
+/*! На частоте в 16МГц для использования полного разрешения АЦП
+	необходимо использователь предделитель не менее чем 128
+	на частоте 8 МГц - не менее чем 64
+	от изменения значений до их применения может пройти некоторое время(см. даташит)*/
+void rscs_adc_set_prescaler(rscs_adc_prescaler_t presc);
 
-/*Функция для получения результатов с внутреннего АЦП. Возвращает результат или
- * код ошибки:
- * Вернёт RSCS_E_BUSY, если результат измерения не готов
- * Вернёт RSCS_E_INVARG, если канал, для которого есть результат, не соответствует
- * каналу, указанному в дескрипторе, а также если нет нового результата*/
-int32_t adc_internal_getResult(adc_descriptor_t * descriptor_p);
+//! Установка режима
+//  от изменения значений до их применения может пройти некоторое время(см. даташит)
+void rscs_adc_set_mode(rscs_adc_mode_t mode);
+
+//! Начало измерения. Вернет RSCS_E_BUSY если, уже есть измерение в процессе.
+rscs_e rscs_adc_start_conversion(rscs_adc_channel_t channel);
+
+//! Получение результата измерения.
+/*! Если нет свежих данных, вернет RSCS_E_BUSY*/
+rscs_e rscs_adc_get_result(int32_t * value_ptr, rscs_adc_channel_t channel);
 
 #endif /* ADC_H_ */
