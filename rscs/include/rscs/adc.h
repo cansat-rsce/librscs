@@ -65,13 +65,11 @@ typedef enum {
 	RSCS_ADC_REF_INTERNAL_2DOT56= 3,
 } rscs_adc_ref_t;
 
-#ifdef __AVR_ATmega128__
 //! Режим работы АЦП - непрерывный или одиночный
 typedef enum {
 	RSCS_ADC_MODE_SINGLE 	= 0, 		//!< Одиночный
 	RSCS_ADC_MODE_CONTINIOUS= 1,	//!< Непрерывный
 } rscs_adc_mode_t;
-#endif
 
 //! Инициализация АЦП
 /*! Параметры по-умолчанию:

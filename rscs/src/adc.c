@@ -58,13 +58,17 @@ void rscs_adc_set_prescaler(rscs_adc_prescaler_t presc){
 	ADCSRA |= presc;
 }
 
-#ifdef __AVR_ATmega128__
 void rscs_adc_set_mode(rscs_adc_mode_t mode){
+#ifdef __AVR_ATmega128__
 	ADCSRA &= ~(1 << ADFR);
 
 	ADCSRA |= (mode << ADFR);
-}
+#elif defined __AVR_ATmega328P__
+	ADCSRA &= ~(1 << ADATE);
+
+	ADCSRA |= (mode << ADATE);
 #endif
+}
 
 rscs_e rscs_adc_get_result(int32_t * value_ptr, rscs_adc_channel_t channel) {
 
