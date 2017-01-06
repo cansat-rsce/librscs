@@ -1,4 +1,9 @@
+#include <stdlib.h>
+#include <stdbool.h>
+
 #include "../include/rscs/bmp280.h"
+
+#include "../include/rscs/i2c.h"
 
 /*Дескриптор датчика.
  *Поле mode заполняется rscs_bmp280_changemode()*/
@@ -13,5 +18,91 @@ struct rscs_bmp280_descriptor {
 	rscs_bmp280_mode_t mode;
 };
 
+rscs_bmp280_descriptor_t * rscs_bmp280_init(rscs_i2c_bus_t * i2c, i2c_addr_t address){
+	rscs_bmp280_descriptor_t * pointer = (rscs_bmp280_descriptor_t *) malloc(sizeof(rscs_bmp280_descriptor_t));
+	pointer->i2c = i2c;
+	pointer->address = address;
+	return pointer;
+}
 
+void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr){
+	free(descr);
+}
 
+rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_parameters_t * params){
+	//TODO: реализовать обработку ошибок
+	uint8_t tmp;
+	rscs_i2c_init(descr->i2c);
+	rscs_i2c_start(descr->i2c);
+	rscs_i2c_send_slaw(descr->i2c, descr->address, false);
+	//TODO: задефайнить адреса регистров
+	tmp = 0xD0;
+	rscs_i2c_write(descr->i2c, &tmp, 1);
+	rscs_i2c_start(descr->i2c);
+	rscs_i2c_send_slaw(descr->i2c, descr->address, true);
+	rscs_i2c_read(descr->i2c, &tmp, 1, true);
+	rscs_i2c_stop(descr->i2c);
+	if(tmp != 0x58) return RSCS_E_INVRESP;
+
+	rscs_i2c_start(descr->i2c);
+	rscs_i2c_send_slaw(descr->i2c, descr->address, false);
+	tmp = 0x88;
+	rscs_i2c_write(descr->i2c, &tmp, 1);
+	rscs_i2c_start(descr->i2c);
+	rscs_i2c_send_slaw(descr->i2c, descr->address, true);
+	rscs_i2c_read(descr->i2c, & descr->calibration_values, sizeof(descr->calibration_values), true);
+	rscs_i2c_stop(descr->i2c);
+
+	rscs_i2c_start(descr->i2c);
+	rscs_i2c_send_slaw(descr->i2c, descr->address, false);
+	tmp = 0xF4;
+	rscs_i2c_write(descr->i2c, &tmp, 1);
+	tmp = (params->temperature_oversampling << 5) | (params->pressure_oversampling << 2);
+	rscs_i2c_write(descr->i2c, &tmp, 1);
+	tmp = (params->standbytyme << 5) | (params->filter << 2);
+	rscs_i2c_write(descr->i2c, &tmp, 1);
+	rscs_i2c_stop(descr->i2c);
+
+	descr->parameters = *params;
+
+	return RSCS_E_NONE;
+}
+
+const rscs_bmp280_parameters_t * rscs_bmp280_get_config(rscs_bmp280_descriptor_t * descr){
+	return &descr->parameters;
+}
+
+const rscs_bmp280_calibration_values_t * rscs_bmp280_get_calibration_values(rscs_bmp280_descriptor_t * descr){
+	return &descr->calibration_values;
+}
+
+rscs_e rscs_bmp280_changemode(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_mode_t mode){
+	uint8_t tmp;
+	rscs_i2c_start(bmp->i2c);
+	rscs_i2c_send_slaw(bmp->i2c, bmp->address, false);
+	tmp = 0xF4;
+	rscs_i2c_write(bmp->i2c, &tmp, 1);
+	tmp = (bmp->parameters.temperature_oversampling << 5) |
+			(bmp->parameters.pressure_oversampling << 2) |
+			mode;
+	rscs_i2c_write(bmp->i2c, &tmp, 1);
+	rscs_i2c_stop(bmp->i2c);
+
+	return RSCS_E_NONE;
+}
+
+rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_rawdata_t * data_p){
+	uint8_t tmp[6];
+	rscs_i2c_start(bmp->i2c);
+	rscs_i2c_send_slaw(bmp->i2c, bmp->address, false);
+	tmp[0] = 0xF7;
+	rscs_i2c_write(bmp->i2c, tmp, 1);
+	rscs_i2c_start(bmp->i2c);
+	rscs_i2c_send_slaw(bmp->i2c, bmp->address, true);
+	rscs_i2c_read(bmp->i2c, tmp, 6, true);
+	rscs_i2c_stop(bmp->i2c);
+	data_p->rawpress = (tmp[0] << 12) | (tmp[1] << 4) | (tmp[2] >> 4);
+	data_p->rawpress = (tmp[3] << 12) | (tmp[4] << 4) | (tmp[5] >> 4);
+
+	return RSCS_E_NONE;
+}

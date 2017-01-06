@@ -21,14 +21,14 @@ typedef enum {
 
 //Время между двумя измерениями в непрерывном режиме
 typedef enum {
-	RSCS_BMP280_STANDBYTIME_500US 	= 0,
-	RSCS_BMP280_STANDBYTIME_63MS 	= 1,
-	RSCS_BMP280_STANDBYTIME_125MS 	= 2,
-	RSCS_BMP280_STANDBYTIME_250MS 	= 3,
-	RSCS_BMP280_STANDBYTIME_500MS 	= 4,
-	RSCS_BMP280_STANDBYTIME_1S 		= 5,
-	RSCS_BMP280_STANDBYTIME_2S 		= 6,
-	RSCS_BMP280_STANDBYTIME_4S 		= 7,
+	RSCS_BMP280_STANDBYTIME_500US 		= 0,
+	RSCS_BMP280_STANDBYTIME_62DOT5MS 	= 1,
+	RSCS_BMP280_STANDBYTIME_125MS 		= 2,
+	RSCS_BMP280_STANDBYTIME_250MS 		= 3,
+	RSCS_BMP280_STANDBYTIME_500MS 		= 4,
+	RSCS_BMP280_STANDBYTIME_1S 			= 5,
+	RSCS_BMP280_STANDBYTIME_2S 			= 6,
+	RSCS_BMP280_STANDBYTIME_4S 			= 7,
 } rscs_bmp280_standbytime_t;
 
 /*Режимы работы.
@@ -42,16 +42,21 @@ typedef enum {
 //Режимы фильтрованных измерений (см. даташит)
 typedef enum {
 	RSCS_BMP280_FILTER_OFF 	= 0,
-	RSCS_BMP280_FILTER_X2 	= 2,
-	RSCS_BMP280_FILTER_X4 	= 4,
-	RSCS_BMP280_FILTER_X8 	= 8,
-	RSCS_BMP280_FILTER_X16 	= 16,
+	RSCS_BMP280_FILTER_X2 	= 1,
+	RSCS_BMP280_FILTER_X4 	= 2,
+	RSCS_BMP280_FILTER_X8 	= 3,
+	RSCS_BMP280_FILTER_X16 	= 4,
 } rscs_bmp280_filter_t;
 
 //Калибровочные значения
+#pragma pack(push, 1)
 typedef struct {
-	uint16_t T[3], P[9];
+	uint16_t T1;
+	int16_t T2, T3;
+	uint16_t P1;
+	int16_t P2, P3, P4, P5, P6, P7, P8, P9;
 } rscs_bmp280_calibration_values_t;
+#pragma pack(pop)
 
 /*Параметры датчика. Все поля, кроме mode, заполняются пользователем в самой структуре
  *перед вызовом rscs_bmp280_init()
@@ -78,20 +83,25 @@ typedef struct {
 
 // Создание дескриптора датчика
 // Не инициализирует сам датчик.
-rscs_bmp280_descriptor_t * rscs_bmp280_init(void);
+rscs_bmp280_descriptor_t * rscs_bmp280_init(rscs_i2c_bus_t * i2c, i2c_addr_t address);
 
-// Освобождние дескритора датчика
+// Освобождение дескритора датчика
 void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr);
 
 // Инилиализация датчика
 // загрузка калибровочных коээфициентов и передача параметров конфигурации
-void rscs_bmp280_setup(const rscs_bmp280_parameters_t * params);
+rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_parameters_t * params);
 
 // Возвращает указатель не текущую конфигурацию датчика
 /* Подразумвается сохраненная на МК копия конфигурации, а не та, что
    хранится в самом датчике. Указатель действителен до тех пор, пока не будет
    вызвана rscs_bmp280_deinit для этого дескриптора */
 const rscs_bmp280_parameters_t * rscs_bmp280_get_config(rscs_bmp280_descriptor_t * descr);
+
+// Возвращает указатель на значения калибровоных коэффициентов датчика
+/*  Указатель действителен до тех пор, пока не будет
+   вызвана rscs_bmp280_deinit для этого дескриптора */
+const rscs_bmp280_calibration_values_t * rscs_bmp280_get_calibration_values(rscs_bmp280_descriptor_t * descr);
 
 //Изменение режима работы. Для начала одиночного измерения преведите в FORCE режим
 rscs_e rscs_bmp280_changemode(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_mode_t mode);
