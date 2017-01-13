@@ -21,6 +21,7 @@
 #define I2C_WRITE_NO_ACK 0x30
 #define I2C_ARB_LOST 0x38
 
+static bool _i2c_internal_needinit = true;
 
 inline static rscs_e i2c_status_to_error(uint8_t status)
 {
@@ -42,11 +43,14 @@ inline static rscs_e i2c_status_to_error(uint8_t status)
 
 void rscs_i2c_init(rscs_i2c_bus_t * bus)
 {
-	// настраиваем частоту на стандартные 100 кГц
-	rscs_i2c_set_scl_rate(bus, 100);
+	if(_i2c_internal_needinit){
+		// настраиваем частоту на стандартные 100 кГц
+		rscs_i2c_set_scl_rate(bus, 100);
 
-	// сбрасываем модуль в исходное состояние
-	rscs_i2c_reset(bus);
+		// сбрасываем модуль в исходное состояние
+		rscs_i2c_reset(bus);
+		_i2c_internal_needinit = false;
+	}
 }
 
 
