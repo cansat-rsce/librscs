@@ -21,6 +21,7 @@
 #define I2C_WRITE_NO_ACK 0x30
 #define I2C_ARB_LOST 0x38
 
+static bool _i2c_internal_needinit = true;
 
 inline static rscs_e i2c_status_to_error(uint8_t status)
 {
@@ -42,11 +43,14 @@ inline static rscs_e i2c_status_to_error(uint8_t status)
 
 void rscs_i2c_init(rscs_i2c_bus_t * bus)
 {
-	// настраиваем частоту на стандартные 100 кГц
-	rscs_i2c_set_scl_rate(bus, 100);
+	if(_i2c_internal_needinit){
+		// настраиваем частоту на стандартные 100 кГц
+		rscs_i2c_set_scl_rate(bus, 100);
 
-	// сбрасываем модуль в исходное состояние
-	rscs_i2c_reset(bus);
+		// сбрасываем модуль в исходное состояние
+		rscs_i2c_reset(bus);
+		_i2c_internal_needinit = false;
+	}
 }
 
 
@@ -62,7 +66,7 @@ void rscs_i2c_set_scl_rate(rscs_i2c_bus_t * bus, uint32_t f_scl_kHz)
 }
 
 
-void rscs_isc_set_timeout(rscs_i2c_bus_t * bus, uint32_t timeout_us)
+void rscs_i2c_set_timeout(rscs_i2c_bus_t * bus, uint32_t timeout_us)
 {
 	bus->_timeout_us = timeout_us;
 }
@@ -76,14 +80,14 @@ rscs_e rscs_i2c_start(rscs_i2c_bus_t * bus)
 		if (TWCR & (1<<TWINT)) {
 			uint8_t status = TWSR & 0xF8;
 			if (status == I2C_START_TRANSFERED || status == I2C_RESTART_TRANSFERED)	{
-				return 0;
+				return RSCS_E_NONE;
 			} else {
 				return i2c_status_to_error(status);
 			}
-			_delay_us(1);
 		}
+		_delay_us(1);
 	}
-	return RSCS_E_NONE;
+	return RSCS_E_TIMEOUT;
 }
 
 

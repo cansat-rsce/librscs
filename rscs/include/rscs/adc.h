@@ -71,7 +71,6 @@ typedef enum {
 	RSCS_ADC_MODE_CONTINIOUS= 1,	//!< Непрерывный
 } rscs_adc_mode_t;
 
-
 //! Инициализация АЦП
 /*! Параметры по-умолчанию:
     - опорное напряжеие - RSCS_ADC_REF_EXTERNAL_VCC
@@ -91,9 +90,11 @@ void rscs_adc_set_refrence(rscs_adc_ref_t ref);
 	от изменения значений до их применения может пройти некоторое время(см. даташит)*/
 void rscs_adc_set_prescaler(rscs_adc_prescaler_t presc);
 
-//! Установка режима
+#ifdef __AVR_ATmega128__
+//! Установка режима (только ATmega128)
 //  от изменения значений до их применения может пройти некоторое время(см. даташит)
 void rscs_adc_set_mode(rscs_adc_mode_t mode);
+#endif
 
 //! Начало измерения. Вернет RSCS_E_BUSY если, уже есть измерение в процессе.
 rscs_e rscs_adc_start_conversion(rscs_adc_channel_t channel);
