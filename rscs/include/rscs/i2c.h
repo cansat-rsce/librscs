@@ -41,7 +41,7 @@ void rscs_i2c_reset(rscs_i2c_bus_t * bus);
 void rscs_i2c_set_scl_rate(rscs_i2c_bus_t * bus, uint32_t f_scl_kHz);
 
 // Установка таймаута в микросекундах на i2c операции
-void rscs_isc_set_timeout(rscs_i2c_bus_t * bus, uint32_t timeout_us);
+void rscs_i2c_set_timeout(rscs_i2c_bus_t * bus, uint32_t timeout_us);
 
 // Создает на i2c шине событие START.
 // Если шина и так находится под нашим контролем - этот вызов создаст событие RESTART
