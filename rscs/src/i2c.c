@@ -66,7 +66,7 @@ void rscs_i2c_set_scl_rate(rscs_i2c_bus_t * bus, uint32_t f_scl_kHz)
 }
 
 
-void rscs_isc_set_timeout(rscs_i2c_bus_t * bus, uint32_t timeout_us)
+void rscs_i2c_set_timeout(rscs_i2c_bus_t * bus, uint32_t timeout_us)
 {
 	bus->_timeout_us = timeout_us;
 }
