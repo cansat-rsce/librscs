@@ -80,14 +80,14 @@ rscs_e rscs_i2c_start(rscs_i2c_bus_t * bus)
 		if (TWCR & (1<<TWINT)) {
 			uint8_t status = TWSR & 0xF8;
 			if (status == I2C_START_TRANSFERED || status == I2C_RESTART_TRANSFERED)	{
-				return 0;
+				return RSCS_E_NONE;
 			} else {
 				return i2c_status_to_error(status);
 			}
-			_delay_us(1);
 		}
+		_delay_us(1);
 	}
-	return RSCS_E_NONE;
+	return RSCS_E_TIMEOUT;
 }
 
 
