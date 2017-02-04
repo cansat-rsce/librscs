@@ -140,17 +140,17 @@ void rscs_uart_set_parity(rscs_uart_bus_t * bus, rscs_uart_parity_t parity)
 }
 
 
-void rscs_uart_set_stop_bits(rscs_uart_bus_t * bus, int stopbits)
+void rscs_uart_set_stop_bits(rscs_uart_bus_t * bus, rscs_uart_stopbits_t stopbits)
 {
 	// зануляем текущую настройку
 	*bus->UCSRC &= ~(1 << USBS0);
 
 	switch (stopbits)
 	{
-	case 1:
+	case RSCS_UART_STOP_BITS_ONE:
 		// по нулям
 		break;
-	case 2:
+	case RSCS_UART_STOP_BITS_TWO:
 		*bus->UCSRC |= (1 << USBS0);
 		break;
 

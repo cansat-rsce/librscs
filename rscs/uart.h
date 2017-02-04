@@ -17,10 +17,12 @@ typedef enum
 	RSCS_UART_PARITY_ODD,
 } rscs_uart_parity_t;
 
+
+// флаги
 typedef enum
 {
-	RSCS_UART_FLAG_ENABLE_TX = 0x01,
-	RSCS_UART_FLAG_ENABLE_RX = 0x02,
+	RSCS_UART_FLAG_ENABLE_TX = 0x01,	// использовать TX для этого уарта
+	RSCS_UART_FLAG_ENABLE_RX = 0x02,	// использовать RX для этого уарта
 } rscs_uart_mode_t;
 
 
@@ -28,8 +30,18 @@ typedef enum
 typedef enum
 {
 	RSCS_UART_ID_UART0,	// UART0
+#ifdef __AVR_ATmega128__
 	RSCS_UART_ID_UART1	// UART1
+#endif
 } rscs_uart_id_t;
+
+
+// количество стоповых бит
+typedef enum
+{
+	RSCS_UART_STOP_BITS_ONE, 	// один
+	RSCS_UART_STOP_BITS_TWO,	// два
+} rscs_uart_stopbits_t;
 
 // Инициализация модуля. flags - битовая композиция значений rscs_uart_mode_t
 // id - одно из значений rscs_uart_id_t - выбор модуля, с которым будем работать
@@ -45,7 +57,7 @@ void rscs_uart_set_baudrate(rscs_uart_bus_t * bus, uint32_t baudrate);
 // Установка параметров бита четности
 void rscs_uart_set_parity(rscs_uart_bus_t * bus, rscs_uart_parity_t parity);
 // установка количества стоповых битов. Для atmega128 допустимы значения 1, 2
-void rscs_uart_set_stop_bits(rscs_uart_bus_t * bus, int stopbits);
+void rscs_uart_set_stop_bits(rscs_uart_bus_t * bus, rscs_uart_stopbits_t stopbits);
 
 // запись на UART TX линию
 void rscs_uart_write(rscs_uart_bus_t * bus, const void * dataptr, size_t dataisize);
