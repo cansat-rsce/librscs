@@ -22,44 +22,33 @@
 
 typedef uint8_t i2c_addr_t;
 
-// Дескриптор шины
-typedef struct
-{
-	// поля для внутреннего использования
-	uint32_t _timeout_us;
-} rscs_i2c_bus_t;
-
-
 // Инициализация i2c.
-void rscs_i2c_init(rscs_i2c_bus_t * bus);
+void rscs_i2c_init(void);
 
 // Сброс модуля I2C. Полезно при повторном запуске после обнаружения ошибки
 // рекомендуется делать перед первым стартом сесии обмена данными
-void rscs_i2c_reset(rscs_i2c_bus_t * bus);
+void rscs_i2c_reset(void);
 
 // Установка частоты линии scl (кГц)
-void rscs_i2c_set_scl_rate(rscs_i2c_bus_t * bus, uint32_t f_scl_kHz);
-
-// Установка таймаута в микросекундах на i2c операции
-void rscs_i2c_set_timeout(rscs_i2c_bus_t * bus, uint32_t timeout_us);
+void rscs_i2c_set_scl_rate(uint32_t f_scl_kHz);
 
 // Создает на i2c шине событие START.
 // Если шина и так находится под нашим контролем - этот вызов создаст событие RESTART
-rscs_e rscs_i2c_start(rscs_i2c_bus_t * bus);
+rscs_e rscs_i2c_start(void);
 
 // Создает на шине состояние STOP
-rscs_e rscs_i2c_stop(rscs_i2c_bus_t * bus);
+rscs_e rscs_i2c_stop(void);
 
 // Отправляет на шину 7мибитный адрес ведомого устройства с битом-флагом чтения/записи
 /* Второй пареметр == 0 - обращение к ведомому в режиме записи.
    Второй параметр == 1 - обращение к ведомому в режиме чтения.*/
-rscs_e rscs_i2c_send_slaw(rscs_i2c_bus_t * bus, uint8_t slave_addr, bool read_access);
+rscs_e rscs_i2c_send_slaw(uint8_t slave_addr, bool read_access);
 
 // Передача данных ведомому устройству
 /* Перед вызовом этой функции на шину нужно передать адрес ведомого без бита чтения - `i2c_send_slaw(..., 0);`
 
    Записывает data_size байт из памяти по указателю data_ptr на устройство. */
-rscs_e rscs_i2c_write(rscs_i2c_bus_t * bus, const void * data_ptr, size_t data_size);
+rscs_e rscs_i2c_write(const void * data_ptr, size_t data_size);
 
 // Получение данных от ведомого устройства
 /* Перед вызовом этой функции на шину нужно передать адрес ведомого без бита чтения - `i2c_send_slaw(..., 0);`
@@ -68,6 +57,6 @@ rscs_e rscs_i2c_write(rscs_i2c_bus_t * bus, const void * data_ptr, size_t data_s
    аргумент NACK_at_end позволяет управлять подтверждением получения байта от ведомого.
    если этот аргумент установлен в true, то после получения последнего байта ведомому будет передан
    Not ACKnowledge, что означает завершение сеанса чтения. */
-rscs_e rscs_i2c_read(rscs_i2c_bus_t * bus, void * data_ptr, size_t data_size, bool NACK_at_end);
+rscs_e rscs_i2c_read(void * data_ptr, size_t data_size, bool NACK_at_end);
 
 #endif /* RSCS_I2C_H_ */
