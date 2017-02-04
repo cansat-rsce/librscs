@@ -61,14 +61,14 @@
 			<locationURI>PARENT-2-PROJECT_LOC/rscs/onewire.h</locationURI>
 		</link>
 		<link>
-			<name>rscs/platform.h</name>
-			<type>1</type>
-			<locationURI>PARENT-2-PROJECT_LOC/rscs/platform.h</locationURI>
-		</link>
-		<link>
 			<name>rscs/sdcard.h</name>
 			<type>1</type>
 			<locationURI>PARENT-2-PROJECT_LOC/rscs/sdcard.h</locationURI>
+		</link>
+		<link>
+			<name>rscs/servo.h</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/rscs/servo.h</locationURI>
 		</link>
 		<link>
 			<name>rscs/spi.h</name>
@@ -109,6 +109,11 @@
 			<name>rscs/_source/sdcard.c</name>
 			<type>1</type>
 			<locationURI>PARENT-2-PROJECT_LOC/rscs/_source/sdcard.c</locationURI>
+		</link>
+		<link>
+			<name>rscs/_source/servo.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/rscs/_source/servo.c</locationURI>
 		</link>
 		<link>
 			<name>rscs/_source/spi.c</name>

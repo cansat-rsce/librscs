@@ -1,18 +1,27 @@
-#include "../sdcard.h"
-
-#include <string.h>
-#include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <avr/io.h>
 #include <util/delay.h>
 
+#include "../config.h"
+#include "../sdcard.h"
 #include "../crc.h"
 #include "../error.h"
 
 // =========================================================
 // Вспомогательные сущности
 // =========================================================
+
+struct rscs_sdcard
+{
+	volatile uint8_t * cs_ddr; 	// регистр DDR порта, на котором расположен CS пин
+	volatile uint8_t * cs_port;	// регистр PORT порта, на котором расположен CS пин
+	uint8_t cs_pin_mask;		// номер пина CS в порту
+
+	uint32_t timeout;			// таймаут для операций SD карты
+};
+
 #define SD_R1_IDLE (1 << 0)
 #define SD_R1_ILLEGAL_CMD (1 << 2)
 #define SD_R1_CRC_ERR (1 << 3)
@@ -30,46 +39,65 @@
 
 // =================================================================
 
-void rscs_sd_init(rscs_sdcard_t * self)
+rscs_sdcard_t * rscs_sd_init(uint8_t * cs_ddr_reg, uint8_t * cs_port_reg, uint8_t cs_pin_mask)
 {
-	// настраиваем cs порт на вывод
-	*self->cs_ddr |= (1 << self->cs_pin);
+	rscs_sdcard_t * self = (rscs_sdcard_t*)malloc(sizeof(rscs_sdcard_t));
+	if (NULL == self)
+		return self;
+
+	self->cs_ddr = cs_ddr_reg;
+	self->cs_port = cs_port_reg;
+	self->cs_pin_mask = cs_pin_mask;
+
+	// настраиваем cs пин на вывод
+	*self->cs_ddr |= (self->cs_pin_mask);
+	// и ставим его в OFF состояние, воизбежание
+	rscs_sd_cs(self, false);
+
+	return self;
 }
 
-void rscs_sd_spi_setup(rscs_sdcard_t  * self)
+
+void rscs_sd_deinit(rscs_sdcard_t * self)
 {
-	rscs_spi_set_order(self->bus, RSCS_SPI_ORDER_MSB_FIRST);
-	rscs_spi_set_pol(self->bus, RSCS_SPI_POL_SAMPLE_RISE_SETUP_FALL);
-	rscs_spi_set_clk(self->bus, 16000); // частоту на маскимально возможную
+	free(self);
 }
 
 
-void rscs_sd_spi_setup_slow(rscs_sdcard_t  * self)
+void rscs_sd_spi_setup(void)
 {
-	rscs_spi_set_order(self->bus, RSCS_SPI_ORDER_MSB_FIRST);
-	rscs_spi_set_pol(self->bus, RSCS_SPI_POL_SAMPLE_RISE_SETUP_FALL);
-	rscs_spi_set_clk(self->bus, 400); // не более 400кгц
+	rscs_spi_set_order(RSCS_SPI_ORDER_MSB_FIRST);
+	rscs_spi_set_pol(RSCS_SPI_POL_SAMPLE_RISE_SETUP_FALL);
+	rscs_spi_set_clk(RSCS_SDCARD_SPI_CLK_FAST); // частоту на маскимально возможную
+}
+
+
+void rscs_sd_spi_setup_slow(void)
+{
+	rscs_spi_set_order(RSCS_SPI_ORDER_MSB_FIRST);
+	rscs_spi_set_pol(RSCS_SPI_POL_SAMPLE_RISE_SETUP_FALL);
+	rscs_spi_set_clk(RSCS_SDCARD_SPI_CLK_SLOW); // не более 400кгц
 }
 
 
 void rscs_sd_cs(rscs_sdcard_t * self, bool state)
 {
 	if (state)
-		*self->cs_port |= (1 << self->cs_pin);
+		*self->cs_port |= self->cs_pin_mask;
 	else
-		*self->cs_port &= ~(1 << self->cs_pin);
+		*self->cs_port &= ~self->cs_pin_mask;
 }
 
 
 void rscs_sd_write(rscs_sdcard_t * card, const void * buffer, size_t buffer_size)
 {
-	rscs_spi_write(card->bus, buffer, buffer_size);
+	rscs_spi_write(buffer, buffer_size);
 }
 
 
 void rscs_sd_read(rscs_sdcard_t * card, void * buffer, size_t buffer_size)
 {
-	rscs_spi_read(card->bus, buffer, buffer_size, 0xFF);
+	rscs_spi_read(buffer, buffer_size, 0xFF);
 }
 
 
@@ -134,10 +162,10 @@ rscs_e rscs_sd_cmd(rscs_sdcard_t * self, rscs_sd_cmd_t cmd, uint32_t argument, v
 			break;
 
 		// пока ответа нет - шина держится в единице (0xFF)
-		if (self->_timeout)
+		if (self->timeout)
 		{
 			_delay_us(1);
-			if (timespent++ > self->_timeout)
+			if (timespent++ > self->timeout)
 				return RSCS_E_TIMEOUT;
 		}
 
@@ -161,10 +189,10 @@ rscs_e rscs_sd_wait_busy(rscs_sdcard_t * self)
 			break;
 
 		_delay_us(1);
-		if (self->_timeout)
+		if (self->timeout)
 		{
 			timespent++;
-			if (timespent > self->_timeout)
+			if (timespent > self->timeout)
 				return RSCS_E_TIMEOUT;
 		}
 	}
