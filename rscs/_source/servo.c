@@ -50,7 +50,13 @@ rscs_servo_t * rscs_servo_init(rscs_servo_id_t id)
 
 	// так, ну вроде определились с настройками
 	// запускаем таймер 1
+#if F_CPU == 8000000
+	ICR1 = 80000; // FIXME: Это очевидно не верно, так как поле принимает максимум 65535. Исправить!
+#elif F_CPU == 16000000
 	ICR1 = 40000;
+#else
+#error "Wrong F_CPU value"
+#endif
 	TCCR1A |= (0<<WGM10) | (1<<WGM11);
 	TCCR1B |= (1<<WGM12) | (1<<WGM13)
 			| (0<<CS12) | (1<<CS11) | (0<<CS10);
