@@ -1,4 +1,4 @@
-#include "../include/rscs/i2c.h"
+#include "../i2c.h"
 
 #include <stdbool.h>
 
@@ -7,7 +7,7 @@
 #include <util/delay.h>
 #include <util/twi.h>
 
-#include "../include/rscs/error.h"
+#include "../error.h"
 
 #define I2C_START_TRANSFERED 0x10
 #define I2C_RESTART_TRANSFERED 0x08

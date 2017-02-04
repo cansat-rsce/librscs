@@ -1,4 +1,4 @@
-#include "../include/rscs/sdcard.h"
+#include "../sdcard.h"
 
 #include <string.h>
 #include <errno.h>
@@ -7,8 +7,8 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-#include "../include/rscs/crc.h"
-#include "../include/rscs/error.h"
+#include "../crc.h"
+#include "../error.h"
 
 // =========================================================
 // Вспомогательные сущности

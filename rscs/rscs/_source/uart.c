@@ -1,4 +1,4 @@
-#include "../include/rscs/uart.h"
+#include "../uart.h"
 
 #include <stdlib.h>
 

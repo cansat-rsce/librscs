@@ -1,4 +1,4 @@
-#include "../../include/rscs/stdext/stdio.h"
+#include "../../stdext/stdio.h"
 
 static int rscs_uart_stream_read(FILE * stream)
 {

@@ -1,4 +1,4 @@
-#include "../include/rscs/onewire.h"
+#include "../onewire.h"
 
 #include <util/delay.h>
 

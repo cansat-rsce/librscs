@@ -1,7 +1,7 @@
-#include "../include/rscs/spi.h"
+#include "../spi.h"
 
 #include <stdlib.h>
-#include "platform.h"
+#include "../platform.h"
 
 // для удобства - локальная инлайновая функция
 inline static uint8_t spi_do_inline(uint8_t value)
