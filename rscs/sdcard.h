@@ -8,6 +8,9 @@
 #include "spi.h"
 #include "error.h"
 
+struct rscs_sdcard;
+typedef struct rscs_sdcard rscs_sdcard_t;
+
 // типы sd карт
 typedef enum
 {
@@ -39,29 +42,28 @@ typedef enum
 	RSCS_SD_R7,
 } rscs_sd_resp_t;
 
-typedef struct
-{
-	rscs_spi_bus_t * bus; 		// дескриптор SPI шины, к которой подключена эта SD карта
-	volatile uint8_t * cs_ddr; 	// регистр DDR порта, на котором расположен CS пин
-	volatile uint8_t * cs_port;	// регистр PORT порта, на котором расположен CS пин
-	uint8_t cs_pin;				// номер пина CS в порту
 
-	// внутренние поля
-	uint32_t _timeout;
-} rscs_sdcard_t ;
-
-
-// Инициализация дескриптора SD карты (не её самой, только переферии МК)
-/* по факту настраивает порт на вывод, SPI не трогает ибо для них есть отдельные функции */
-void rscs_sd_init(rscs_sdcard_t * self);
-// Установка таймаута на операции SD карты в микросекундах
-void rscs_sd_set_timeout(rscs_sdcard_t * self, uint32_t timeout_us);
 // настройка SPI для работы с картой (полярность, частота и прочее)
 /* полезно, когда перед sd картой работает какое-то другое SPI устройство, использующее другие настройки */
-void rscs_sd_spi_setup(rscs_sdcard_t * self);
+void rscs_sd_spi_setup(void);
 // настройка SPI для работы с картой в медленном режиме.
 /* Такой режим необходим при вызове операции sd_startup */
-void rscs_sd_spi_setup_slow(rscs_sdcard_t * self);
+void rscs_sd_spi_setup_slow(void);
+
+// Инициализация дескриптора SD карты (не её самой, только переферии МК)
+/* по факту настраивает порт на вывод, SPI не трогает ибо для них есть отдельные функции
+	Параметры:
+	cs_ddr_reg - указатель на DDR регистр порта на котором расположен chip select пин SD карты (например &DDRB).
+	cs_port_reg - Указатель на PORT регистр порта на котором расположен chip select пин SD карты (например - &PORTB).
+	cs_pin_mask - 8-ми битная маска, задающая пин chip select SD карты (Например 1 << 2).
+ */
+rscs_sdcard_t * rscs_sd_init(uint8_t * cs_ddr_reg, uint8_t * cs_port_reg, uint8_t cs_pin_mask);
+
+// Деинициализация SD карты и особождение всех исользуемых модулем для этой карты ресурсов.
+void rscs_sd_deinit(rscs_sdcard_t * self);
+
+// Установка таймаута на операции SD карты в микросекундах
+void rscs_sd_set_timeout(rscs_sdcard_t * self, uint32_t timeout_us);
 
 // =========================================================
 // Транспортный уровень (реализуется модулем SPI)

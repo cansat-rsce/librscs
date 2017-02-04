@@ -1,4 +1,4 @@
-#include "../include/rscs/crc.h"
+#include "../crc.h"
 
 #include <avr/pgmspace.h>
 

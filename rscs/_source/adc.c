@@ -4,8 +4,8 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-#include "../include/rscs/adc.h"
-#include "../include/rscs/error.h"
+#include "../adc.h"
+#include "../error.h"
 
 static bool _adc_internal_needinit = true;
 static rscs_adc_channel_t _current_channel = -1;
