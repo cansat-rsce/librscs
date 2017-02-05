@@ -4,7 +4,8 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-#include "../config.h"
+#include "librscs_config.h"
+
 #include "../sdcard.h"
 #include "../crc.h"
 #include "../error.h"

@@ -2,7 +2,8 @@
 
 #include <util/delay.h>
 
-#include "../config.h"
+#include "librscs_config.h"
+
 #include "../onewire.h"
 
 

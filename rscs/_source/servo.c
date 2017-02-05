@@ -2,7 +2,8 @@
 
 #include <avr/io.h>
 
-#include "../config.h"
+#include "librscs_config.h"
+
 #include "../servo.h"
 
 

@@ -1,4 +1,5 @@
-#include "../config.h"
+#include "librscs_config.h"
+
 #include "../spi.h"
 
 #include <stdlib.h>
