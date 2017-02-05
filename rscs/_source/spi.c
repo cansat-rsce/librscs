@@ -1,10 +1,11 @@
-#include "../include/rscs/spi.h"
+#include "librscs_config.h"
+
+#include "../spi.h"
 
 #include <stdlib.h>
-#include "platform.h"
 
 // для удобства - локальная инлайновая функция
-inline static uint8_t spi_do_inline(uint8_t value)
+inline static uint8_t _spi_do_inline(uint8_t value)
 {
 	SPDR = value;
 	while(!(SPSR & (1<<SPIF)));
@@ -12,12 +13,8 @@ inline static uint8_t spi_do_inline(uint8_t value)
 }
 
 
-
-
-void rscs_spi_init(rscs_spi_bus_t * bus)
+void rscs_spi_init(void)
 {
-	(void)bus; // не используется на атмеге
-
 	/*настройка портов ввода-вывода: все на вывод, кроме MISO */
 	RSCS_SPI_DDRX  |=
 			(1 << RSCS_SPI_MOSI) | (1 << RSCS_SPI_SCK) | (1 << RSCS_SPI_SS) | (0 << RSCS_SPI_MISO);
@@ -26,11 +23,10 @@ void rscs_spi_init(rscs_spi_bus_t * bus)
 
 	/*разрешение spi,старший бит вперед,мастер, режим 0*/
 	SPCR = (1 << SPE) | (1 << MSTR);
-	// SPSR = (0<<SPI2X);
 }
 
 
-void rscs_spi_set_clk(rscs_spi_bus_t * bus, uint32_t clock_kHz)
+void rscs_spi_set_clk(uint32_t clock_kHz)
 {
 	// зануляем все биты, управляющие частотой
 	// будем расставлять единицы где это необходимо
@@ -72,14 +68,14 @@ void rscs_spi_set_clk(rscs_spi_bus_t * bus, uint32_t clock_kHz)
 	{
 		SPCR |= (1 << SPR1) | (1 << SPR0);
 	}
-	else // мы не может быть настолько медленными
+	else // мы не можем быть настолько медленными
 	{
 		abort();
 	}
 }
 
 
-void rscs_spi_set_pol(rscs_spi_bus_t * bus, rscs_spi_polarity_t polarity)
+void rscs_spi_set_pol(rscs_spi_polarity_t polarity)
 {
 	SPCR &= ~((1 << CPOL) | (1 << CPHA));
 
@@ -103,7 +99,7 @@ void rscs_spi_set_pol(rscs_spi_bus_t * bus, rscs_spi_polarity_t polarity)
 }
 
 
-void rscs_spi_set_order(rscs_spi_bus_t * bus, rscs_spi_order_t order)
+void rscs_spi_set_order(rscs_spi_order_t order)
 {
 	SPCR &= ~(1 << DORD);
 
@@ -120,36 +116,28 @@ void rscs_spi_set_order(rscs_spi_bus_t * bus, rscs_spi_order_t order)
 	};
 }
 
-uint8_t rscs_spi_do(rscs_spi_bus_t * bus, uint8_t value)
+uint8_t rscs_spi_do(uint8_t value)
 {
-	(void)bus; // не используется на атмеге
-
-	return spi_do_inline(value);
+	return _spi_do_inline(value);
 }
 
 
-void rscs_spi_read(rscs_spi_bus_t * bus, void * read_buffer, size_t buffer_size, uint8_t dummy)
+void rscs_spi_read(void * read_buffer, size_t buffer_size, uint8_t dummy)
 {
-	(void)bus; // не используется на атмеге
-
 	for (size_t i = 0; i < buffer_size; i++)
-		((uint8_t*)read_buffer)[i] = spi_do_inline(dummy);
+		((uint8_t*)read_buffer)[i] = _spi_do_inline(dummy);
 }
 
 
-void rscs_spi_write(rscs_spi_bus_t * bus, const void * write_buffer, size_t buffer_size)
+void rscs_spi_write(const void * write_buffer, size_t buffer_size)
 {
-	(void)bus; // не используется на атмеге
-
 	for (size_t i = 0; i < buffer_size; i++)
-		spi_do_inline(((const uint8_t*)write_buffer)[i]);
+		_spi_do_inline(((const uint8_t*)write_buffer)[i]);
 }
 
 
-void rscs_spi_exchange(rscs_spi_bus_t * bus, const void * write_buffer, void * read_buffer, size_t buffers_size)
+void rscs_spi_exchange(const void * write_buffer, void * read_buffer, size_t buffers_size)
 {
-	(void)bus; // не используется на атмеге
-
 	for (size_t i = 0; i < buffers_size; i++)
-		((uint8_t*)read_buffer)[i] = spi_do_inline(((const uint8_t*)write_buffer)[i]);
+		((uint8_t*)read_buffer)[i] = _spi_do_inline(((const uint8_t*)write_buffer)[i]);
 }

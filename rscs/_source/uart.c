@@ -1,11 +1,56 @@
-#include "../include/rscs/uart.h"
-
 #include <stdlib.h>
-
 #include <avr/io.h>
 
-void rscs_uart_init(rscs_uart_bus_t * bus, int flags)
+#include "librscs_config.h"
+
+#include "../uart.h"
+
+
+// Дискриптор UART шины
+struct rscs_uart_bus
 {
+	volatile uint8_t * UDR;   // указатель на регистр UDR модуля
+	volatile uint8_t * UCSRA; // указатель на регистр USCRA
+	volatile uint8_t * UCSRB; // указатель на регистр USCRB
+	volatile uint8_t * UCSRC; // указатель на регистр USCRC
+
+	volatile uint8_t * UBRRL; // указатель на регистр UBRRL
+	volatile uint8_t * UBRRH; // указатель на регистр UBRRH
+};
+
+
+rscs_uart_bus_t * rscs_uart_init(rscs_uart_id_t id, int flags)
+{
+	rscs_uart_bus_t * bus = (rscs_uart_bus_t *)malloc(sizeof(rscs_uart_bus_t));
+	if (NULL == bus)
+		return bus;
+
+	if (RSCS_UART_ID_UART0 == id)
+	{
+		bus->UDR = &UDR0;
+		bus->UCSRA = &UCSR0A;
+		bus->UCSRB = &UCSR0B;
+		bus->UCSRC = &UCSR0C;
+		bus->UBRRL = &UBRR0L;
+		bus->UBRRH = &UBRR0H;
+	}
+#if defined __AVR_ATmega128__
+	else if (RSCS_UART_ID_UART0 == id)
+	{
+		bus->UDR = &UDR1;
+		bus->UCSRA = &UCSR1A;
+		bus->UCSRB = &UCSR1B;
+		bus->UCSRC = &UCSR1C;
+		bus->UBRRL = &UBRR1L;
+		bus->UBRRH = &UBRR1H;
+	}
+#endif
+	else
+	{
+		free(bus);
+		return NULL;
+	}
+
 	// затираем биты, которые будем настраивать
 	// а именно - включение RXTX и режим многопроцессорной связи, который мы маскируем
 	*bus->UCSRA &= ~(1 << MPCM0);
@@ -17,6 +62,14 @@ void rscs_uart_init(rscs_uart_bus_t * bus, int flags)
 
 	if (flags & RSCS_UART_FLAG_ENABLE_TX)
 		UCSR0B |= (1 << TXEN0);
+
+	return bus;
+}
+
+void rscs_uart_deinit(rscs_uart_bus_t * bus)
+{
+
+	free(bus);
 }
 
 
@@ -88,17 +141,17 @@ void rscs_uart_set_parity(rscs_uart_bus_t * bus, rscs_uart_parity_t parity)
 }
 
 
-void rscs_uart_set_stop_bits(rscs_uart_bus_t * bus, int stopbits)
+void rscs_uart_set_stop_bits(rscs_uart_bus_t * bus, rscs_uart_stopbits_t stopbits)
 {
 	// зануляем текущую настройку
 	*bus->UCSRC &= ~(1 << USBS0);
 
 	switch (stopbits)
 	{
-	case 1:
+	case RSCS_UART_STOP_BITS_ONE:
 		// по нулям
 		break;
-	case 2:
+	case RSCS_UART_STOP_BITS_TWO:
 		*bus->UCSRC |= (1 << USBS0);
 		break;
 
