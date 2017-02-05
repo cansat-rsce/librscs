@@ -83,7 +83,7 @@ typedef struct {
 
 // Создание дескриптора датчика
 // Не инициализирует сам датчик.
-rscs_bmp280_descriptor_t * rscs_bmp280_init(rscs_i2c_bus_t * i2c, i2c_addr_t address);
+rscs_bmp280_descriptor_t * rscs_bmp280_init(i2c_addr_t address);
 
 // Освобождение дескритора датчика
 void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr);
