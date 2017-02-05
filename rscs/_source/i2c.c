@@ -5,7 +5,7 @@
 #include <util/delay.h>
 #include <util/twi.h>
 
-#include "../config.h"
+#include "librscs_config.h"
 #include "../i2c.h"
 #include "../error.h"
 

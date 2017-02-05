@@ -1,7 +1,8 @@
 #include <stdlib.h>
 #include <avr/io.h>
 
-#include "../config.h"
+#include "librscs_config.h"
+
 #include "../uart.h"
 
 
