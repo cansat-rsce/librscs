@@ -107,10 +107,10 @@ const rscs_bmp280_calibration_values_t * rscs_bmp280_get_calibration_values(rscs
 rscs_e rscs_bmp280_changemode(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_mode_t mode);
 
 //Чтение данных из BMP(в сыром виде)
-rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_rawdata_t * data_p);
+rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, uint32_t * rawpress, uint32_t * rawtemp);
 
 //Рассчёт давления и температуры из сырых значений.
 //WARNING: на ATMega очень медленно и неточно, лучше считать на земле
-void rscs_bmp280_calculate(rscs_bmp280_rawdata_t raw, rscs_bmp280_fp_t * press_p, rscs_bmp280_fp_t * temp_p);
+void rscs_bmp280_calculate(uint32_t rawpress, uint32_t rawtemp, rscs_bmp280_fp_t * press_p, rscs_bmp280_fp_t * temp_p);
 
 #endif /* BMP280_H_ */

@@ -88,7 +88,7 @@ rscs_e rscs_bmp280_changemode(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_mode_t
 	return RSCS_E_NONE;
 }
 
-rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_rawdata_t * data_p){
+rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, uint32_t * rawpress, uint32_t * rawtemp){
 	uint8_t tmp[6];
 	rscs_i2c_start();
 	rscs_i2c_send_slaw(bmp->address, false);
@@ -98,8 +98,8 @@ rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_rawdata_t * 
 	rscs_i2c_send_slaw(bmp->address, true);
 	rscs_i2c_read(tmp, 6, true);
 	rscs_i2c_stop();
-	data_p->rawpress = (tmp[0] << 12) | (tmp[1] << 4) | (tmp[2] >> 4);
-	data_p->rawpress = (tmp[3] << 12) | (tmp[4] << 4) | (tmp[5] >> 4);
+	*rawpress = (tmp[0] << 12) | (tmp[1] << 4) | (tmp[2] >> 4);
+	*rawtemp = (tmp[3] << 12) | (tmp[4] << 4) | (tmp[5] >> 4);
 
 	return RSCS_E_NONE;
 }
