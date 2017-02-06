@@ -4,6 +4,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef __AVR_ATmega128__
+#define RSCS_TIME_MAXSUBSECONDS 31250
+#elif defined __AVR_ATmega328P__
+#define RSCS_TIME_MAXSUBSECONDS (255 * 32)
+#endif
+
 
 //Тип, описывающий время (временная метка)
 typedef struct {
