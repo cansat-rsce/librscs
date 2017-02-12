@@ -35,7 +35,7 @@ rscs_uart_bus_t * rscs_uart_init(rscs_uart_id_t id, int flags)
 		bus->UBRRH = &UBRR0H;
 	}
 #if defined __AVR_ATmega128__
-	else if (RSCS_UART_ID_UART0 == id)
+	else if (RSCS_UART_ID_UART1 == id)
 	{
 		bus->UDR = &UDR1;
 		bus->UCSRA = &UCSR1A;
@@ -61,7 +61,7 @@ rscs_uart_bus_t * rscs_uart_init(rscs_uart_id_t id, int flags)
 		*bus->UCSRB |= (1 << RXEN0);
 
 	if (flags & RSCS_UART_FLAG_ENABLE_TX)
-		UCSR0B |= (1 << TXEN0);
+		*bus->UCSRB |= (1 << TXEN0);
 
 	return bus;
 }
@@ -166,11 +166,9 @@ void rscs_uart_write(rscs_uart_bus_t * bus, const void * dataptr, size_t datasiz
 	const uint8_t * const data = (const uint8_t*)dataptr;
 	for (size_t i = 0; i < datasize; i++)
 	{
-		while ( !(UCSR0A & (1 << UDRE0)) )
+		while ( !(bus->UCSRA & (1 << UDRE0)) )
 		{}
-		UDR0 = data[i];
-		//*bus->UDR = data[i];
-		//PORTB ^= (1<<5);
+		bus->UDR = data[i];
 	}
 }
 
