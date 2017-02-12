@@ -384,30 +384,31 @@ size_t rscs_uart_read_some(rscs_uart_bus_t * bus, void * dataptr, size_t dataisi
 }
 
 
-ISR(USART0_RX_vect)
+inline static void _do_rx_interrupt(rscs_uart_bus_t * bus)
 {
 
 }
 
-
-ISR(USART0_UDRE_vect)
+inline static void _do_udre_interrupt(rscs_uart_bus_t * bus)
 {
-	return;
+
 }
 
 
 #ifdef __AVR_ATmega128__
 
-ISR(USART1_RX_vect)
-{
+	ISR(USART0_RX_vect)		{ _do_rx_interrupt(_uart0_bus);		}
+	ISR(USART1_RX_vect)		{ _do_rx_interrupt(_uart1_bus);		}
+	ISR(USART0_UDRE_vect)	{ _do_udre_interrupt(_uart0_bus);	}
+	ISR(USART1_UDRE_vect)	{ _do_udre_interrupt(_uart1_bus);	}
 
-}
+#elif defined __AVR_ATmega328P__
 
-ISR(USART1_UDRE_vect)
-{
-	return;
-}
+	ISR(USART_RX_vect)		{ _do_rx_interrupt(_uart0_bus);		}
+	ISR(USART_UDRE_vect)	{ _do_udre_interrupt(_uart0_bus);	}
 
+#else
+	#error "Не поддерживаемый микроконтроллер"
 #endif // __AVR_ATmega128__
 
 #endif // RSCS_UART_USEBUFFERS
