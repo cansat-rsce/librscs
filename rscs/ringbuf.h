@@ -14,7 +14,7 @@ typedef struct rscs_ringbuf rscs_ringbuf_t;
 
 //Инициализаци буфера заданного размера
 //Принимает указатель на дескриптор буфера (нужно создать самостоятельно) и его размер
-void rscs_ringbuf_init(rscs_ringbuf_t * buf, size_t bufsyze);
+rscs_ringbuf_t * rscs_ringbuf_init(size_t bufsyze);
 
 //Освобождение памяти буфера
 void rscs_ringbuf_deinit(rscs_ringbuf_t * buf);

@@ -179,7 +179,7 @@ void rscs_uart_read(rscs_uart_bus_t * bus, void * dataptr, size_t datasize)
 
 	for (size_t i = 0; i < datasize; i++)
 	{
-		while (0 == (*bus->UCSRA & (1 << TXC0))) {} // ждем пока в буффере что-нибудь не появится
+		while (0 == (*bus->UCSRA & (1 << RXC0))) {} // ждем пока в буффере что-нибудь не появится
 		data[i] = *bus->UDR;
 	}
 }

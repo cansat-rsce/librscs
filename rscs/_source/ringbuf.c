@@ -13,12 +13,13 @@ struct rscs_ringbuf{
 	tail; //Смещение хвоста
 };
 
-void rscs_ringbuf_init(rscs_ringbuf_t * buf, size_t bufsyze){
-	buf->buffer = (uint8_t *) malloc(bufsyze);
+rscs_ringbuf_t * rscs_ringbuf_init(size_t bufsyze){
+	rscs_ringbuf_t * buf = (rscs_ringbuf_t *) malloc(sizeof(rscs_ringbuf_t) + bufsyze);
 	buf->fullsize = bufsyze;
 	buf->head = 0;
 	buf->tail = 0;
 	buf->size = 0;
+	return buf;
 }
 
 void rscs_ringbuf_deinit(rscs_ringbuf_t * buf){
