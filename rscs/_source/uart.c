@@ -1,23 +1,11 @@
 #include <stdlib.h>
+
 #include <avr/io.h>
+#include <avr/interrupt.h>
 
 #include "librscs_config.h"
 #include "../ringbuf.h"
-
 #include "../uart.h"
-
-#ifdef RSCS_UART_USERXBUFFER0
-rscs_ringbuf_t * rxbuf0;
-#endif
-#ifdef RSCS_UART_USETXBUFFER0
-rscs_ringbuf_t * txbuf0;
-#endif
-#ifdef RSCS_UART_USERXBUFFER1
-rscs_ringbuf_t * rxbuf1;
-#endif
-#ifdef RSCS_UART_USETXBUFFER1
-rscs_ringbuf_t * txbuf1;
-#endif
 
 // Дискриптор UART шины
 struct rscs_uart_bus
@@ -29,17 +17,34 @@ struct rscs_uart_bus
 
 	volatile uint8_t * UBRRL; // указатель на регистр UBRRL
 	volatile uint8_t * UBRRH; // указатель на регистр UBRRH
+
+#ifdef RSCS_UART_USEBUFFERS
+	rscs_ringbuf_t * txbuf;
+	rscs_ringbuf_t * rxbuf;
+#endif
 };
+
+
+// глобальные дескрипторы для контроля повтороной инициализации UART и
+// доступа из прерываний
+static rscs_uart_bus_t * _uart0_bus = NULL;
+#ifdef __AVR_ATmega128__
+static rscs_uart_bus_t * _uart1_bus = NULL;
+#endif
 
 
 rscs_uart_bus_t * rscs_uart_init(rscs_uart_id_t id, int flags)
 {
-	rscs_uart_bus_t * bus = (rscs_uart_bus_t *)malloc(sizeof(rscs_uart_bus_t));
-	if (NULL == bus)
-		return bus;
-
+	rscs_uart_bus_t * bus;
 	if (RSCS_UART_ID_UART0 == id)
 	{
+		if (_uart0_bus != NULL)
+			return NULL; // уже инициализирован
+
+		bus = _uart0_bus = (rscs_uart_bus_t *)malloc(sizeof(rscs_uart_bus_t));
+		if (NULL == bus)
+			return NULL;
+
 		bus->UDR = &UDR0;
 		bus->UCSRA = &UCSR0A;
 		bus->UCSRB = &UCSR0B;
@@ -50,6 +55,14 @@ rscs_uart_bus_t * rscs_uart_init(rscs_uart_id_t id, int flags)
 #if defined __AVR_ATmega128__
 	else if (RSCS_UART_ID_UART1 == id)
 	{
+		if (_uart1_bus != NULL)
+			return NULL; // уже инициализирован
+
+		bus = _uart1_bus = (rscs_uart_bus_t *)malloc(sizeof(rscs_uart_bus_t));
+		if (NULL == bus)
+			return NULL;
+
+
 		bus->UDR = &UDR1;
 		bus->UCSRA = &UCSR1A;
 		bus->UCSRB = &UCSR1B;
@@ -60,7 +73,6 @@ rscs_uart_bus_t * rscs_uart_init(rscs_uart_id_t id, int flags)
 #endif
 	else
 	{
-		free(bus);
 		return NULL;
 	}
 
@@ -70,44 +82,59 @@ rscs_uart_bus_t * rscs_uart_init(rscs_uart_id_t id, int flags)
 	*bus->UCSRB &= ~((1 << TXEN0) | (1 << RXEN0));
 
 	// теперь активируем RXC TXC согласно настройкам
-	if (flags & RSCS_UART_FLAG_ENABLE_RX) {
+	if (flags & RSCS_UART_FLAG_ENABLE_RX)
 		*bus->UCSRB |= (1 << RXEN0);
 
-#ifdef RSCS_UART_USERXBUFFER0
-		if(id == RSCS_UART_ID_UART0) rxbuf0 = rscs_ringbuf_init(RSCS_UART_BUFSIZE);
-#endif
-#ifdef RSCS_UART_USERXBUFFER1
-		if(id == RSCS_UART_ID_UART1) rxbuf1 = rscs_ringbuf_init(RSCS_UART_BUFSIZE);
-#endif
-
-	}
-
-
-	if (flags & RSCS_UART_FLAG_ENABLE_TX) {
+	if (flags & RSCS_UART_FLAG_ENABLE_TX)
 		*bus->UCSRB |= (1 << TXEN0);
 
-#ifdef RSCS_UART_USETXBUFFER0
-		if(id == RSCS_UART_ID_UART0) txbuf0 = rscs_ringbuf_init(RSCS_UART_BUFSIZE);
-#endif
-#ifdef RSCS_UART_USETXBUFFER1
-		if(id == RSCS_UART_ID_UART1) txbuf1 = rscs_ringbuf_init(RSCS_UART_BUFSIZE);
-#endif
-
+#ifdef RSCS_UART_USEBUFFERS
+	if ((flags & RSCS_UART_FLAG_ENABLE_RX) && (flags & RSCS_UART_FLAG_ENABLE_RX))
+	{
+		// TODO: Включить прерывания!
+		bus->rxbuf = rscs_ringbuf_init(RSCS_UART_BUFSIZE_RX);
 	}
+	else
+		bus->rxbuf = NULL;
+
+	if ((flags & RSCS_UART_FLAG_ENABLE_TX) && (flags & RSCS_UART_FLAG_BUFFER_TX))
+		bus->txbuf = rscs_ringbuf_init(RSCS_UART_BUFSIZE_TX);
+	else
+		bus->txbuf = NULL;
+
+	// ну и включаем соответсвующие прерывания
+	// TODO:
+#endif
 
 	return bus;
 }
 
 void rscs_uart_deinit(rscs_uart_bus_t * bus)
 {
-	free(bus);
 
-#ifdef RSCS_UART_USETXBUFFER0
-		if(bus->UDR == &UDR0) {rscs_ringbuf_deinit(rxbuf0);rscs_ringbuf_deinit(txbuf0);}
+#ifdef RSCS_UART_USEBUFFERS
+	if (bus->rxbuf)
+	{
+		// TODO: Выключить прерывания!
+		rscs_ringbuf_deinit(bus->rxbuf);
+	}
+
+	if (bus->txbuf)
+	{
+		// TODO: Выключить прерывания!
+		rscs_ringbuf_deinit(bus->txbuf);
+	}
 #endif
-#ifdef RSCS_UART_USETXBUFFER1
-		if(bus->UDR == &UDR1) {rscs_ringbuf_deinit(rxbuf1);rscs_ringbuf_deinit(txbuf1);}
+
+	if (_uart0_bus == bus)
+		_uart0_bus = NULL;
+
+#ifdef __AVR_ATmega128__
+	if (_uart1_bus == bus)
+		_uart1_bus = NULL;
 #endif
+
+	free(bus);
 }
 
 
@@ -207,6 +234,7 @@ void _rscs_uart_write_wobuf(rscs_uart_bus_t * bus, const void * dataptr, size_t 
 		while ( !(*bus->UCSRA & (1 << UDRE0)) )
 		{}
 		*bus->UDR = data[i];
+
 	}
 }
 
@@ -256,24 +284,130 @@ void _rscs_uart_read_wbuf(rscs_uart_id_t id) {
 #endif
 }
 
-rscs_e rscs_uart_write(rscs_uart_bus_t * bus, const void * dataptr, size_t datasize){
+void rscs_uart_write(rscs_uart_bus_t * bus, const void * dataptr, size_t datasize)
+{
 	const uint8_t * const data = (const uint8_t*)dataptr;
-#ifdef RSCS_UART_USETXBUFFER0
-	if(bus->UDR == &UDR0) {
-		if(datasize > (RSCS_UART_BUFSIZE - rscs_ringbuf_getsize(txbuf0))) return RSCS_E_BUSY;
-		for(int i = 0; i < datasize; i++) {rscs_ringbuf_push(txbuf0, data[i]); }
-		_rscs_uart_write_wbuf(RSCS_UART_ID_UART0);
-	return RSCS_E_NONE;
+
+#ifdef RSCS_UART_USEBUFFERS
+	if (bus->txbuf != NULL)
+	{
+		// если буферизация доступна и разрешена - просто дергаем write_some
+		// пока она не запишет все что может
+		size_t writen = 0;
+		while(writen < datasize)
+		{
+			writen += rscs_uart_write_some(bus, data+writen, datasize-writen);
+		}
+
+		return;
+	}
+#else
+	// в противном случае действум по старинке
+	for (size_t i = 0; i < datasize; i++)
+	{
+		while ( !(*bus->UCSRA & (1 << UDRE0)) )
+		{}
+		*bus->UDR = data[i];
+
 	}
 #endif
-#ifdef RSCS_UART_USETXBUFFER1
-	if(bus->UDR == &UDR1) {
-		if(datasize > (RSCS_UART_BUFSIZE - rscs_ringbuf_getsize(txbuf1))) return RSCS_E_BUSY;
-		for(int i = 0; i < datasize; i++) {rscs_ringbuf_push(txbuf1, data[i]); }
-		_rscs_uart_write_wbuf(RSCS_UART_ID_UART1);
-	return RSCS_E_NONE;
-	}
-#endif
-	_rscs_uart_write_wobuf(bus, dataptr, datasize);
-	return RSCS_E_NONE;
 }
+
+
+void rscs_uart_read(rscs_uart_bus_t * bus, void * dataptr, size_t datasize)
+{
+	uint8_t * const data = (const uint8_t*)dataptr;
+
+#ifdef RSCS_UART_USEBUFFERS
+	if (bus->rxbuf != NULL)
+	{
+		// если буферизация доступна и разрешена - просто дергаем read_some
+		// пока она не прочитает сколько нам надо
+		size_t readed = 0;
+		while(readed < datasize)
+		{
+			readed += rscs_uart_read_some(bus, data+readed, datasize-readed);
+		}
+
+		return;
+	}
+#else
+	// в противном случае действуем по-старинке
+
+	for (size_t i = 0; i < datasize; i++)
+	{
+		while (0 == (*bus->UCSRA & (1 << RXC0))) {} // ждем пока в буффере что-нибудь не появится
+		data[i] = *bus->UDR;
+	}
+#endif
+}
+
+
+
+#ifdef RSCS_UART_USEBUFFERS
+
+size_t rscs_uart_write_some(rscs_uart_bus_t * bus, const void * dataptr, size_t datasize)
+{
+	const uint8_t * const data = (const uint8_t*)dataptr;
+	size_t writen = 0;
+
+	// загоняем все что есть в циклический буфер, пока в нем не кончится место
+	// или пока у нас не кончатся данные
+	while (writen < datasize)
+	{
+		if (!rscs_ringbuf_push(bus->txbuf, data[writen]))
+			break;
+
+		writen++;
+	}
+
+	// теперь, когда данные готовы в кольцевом буфере,
+	// нужно запустить цепь прерываний, которые будут переносить данные из кольцевого буфера
+	// в регистр соотетствующего уарта
+	// вполне возможно, что эта цепь уже запущена - еще не отправлена предидущая порция
+	// так или иначе - нам достаточно просто разрешить прерывание на событие пустого выходного регистра
+	*bus->UCSRB |= (1 << UDRE0);
+
+	// возвращаем сколько удалось записать
+	return writen;
+}
+
+
+size_t rscs_uart_read_some(rscs_uart_bus_t * bus, void * dataptr, size_t dataisize)
+{
+	uint8_t * const data = (const uint8_t*)dataptr;
+	size_t writen = 0;
+
+	// TODO: дописать!
+
+	return writen;
+}
+
+
+ISR(USART0_RX_vect)
+{
+
+}
+
+
+ISR(USART0_UDRE_vect)
+{
+	return;
+}
+
+
+#ifdef __AVR_ATmega128__
+
+ISR(USART1_RX_vect)
+{
+
+}
+
+ISR(USART1_UDRE_vect)
+{
+	return;
+}
+
+#endif // __AVR_ATmega128__
+
+#endif // RSCS_UART_USEBUFFERS
