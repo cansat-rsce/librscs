@@ -2,9 +2,22 @@
 #include <avr/io.h>
 
 #include "librscs_config.h"
+#include "../ringbuf.h"
 
 #include "../uart.h"
 
+#ifdef RSCS_UART_USERXBUFFER0
+rscs_ringbuf_t * rxbuf0;
+#endif
+#ifdef RSCS_UART_USETXBUFFER0
+rscs_ringbuf_t * txbuf0;
+#endif
+#ifdef RSCS_UART_USERXBUFFER1
+rscs_ringbuf_t * rxbuf1;
+#endif
+#ifdef RSCS_UART_USETXBUFFER1
+rscs_ringbuf_t * txbuf1;
+#endif
 
 // Дискриптор UART шины
 struct rscs_uart_bus
@@ -57,19 +70,44 @@ rscs_uart_bus_t * rscs_uart_init(rscs_uart_id_t id, int flags)
 	*bus->UCSRB &= ~((1 << TXEN0) | (1 << RXEN0));
 
 	// теперь активируем RXC TXC согласно настройкам
-	if (flags & RSCS_UART_FLAG_ENABLE_RX)
+	if (flags & RSCS_UART_FLAG_ENABLE_RX) {
 		*bus->UCSRB |= (1 << RXEN0);
 
-	if (flags & RSCS_UART_FLAG_ENABLE_TX)
+#ifdef RSCS_UART_USERXBUFFER0
+		if(id == RSCS_UART_ID_UART0) rxbuf0 = rscs_ringbuf_init(RSCS_UART_BUFSIZE);
+#endif
+#ifdef RSCS_UART_USERXBUFFER1
+		if(id == RSCS_UART_ID_UART1) rxbuf1 = rscs_ringbuf_init(RSCS_UART_BUFSIZE);
+#endif
+
+	}
+
+
+	if (flags & RSCS_UART_FLAG_ENABLE_TX) {
 		*bus->UCSRB |= (1 << TXEN0);
+
+#ifdef RSCS_UART_USETXBUFFER0
+		if(id == RSCS_UART_ID_UART0) txbuf0 = rscs_ringbuf_init(RSCS_UART_BUFSIZE);
+#endif
+#ifdef RSCS_UART_USETXBUFFER1
+		if(id == RSCS_UART_ID_UART1) txbuf1 = rscs_ringbuf_init(RSCS_UART_BUFSIZE);
+#endif
+
+	}
 
 	return bus;
 }
 
 void rscs_uart_deinit(rscs_uart_bus_t * bus)
 {
-
 	free(bus);
+
+#ifdef RSCS_UART_USETXBUFFER0
+		if(bus->UDR == &UDR0) {rscs_ringbuf_deinit(rxbuf0);rscs_ringbuf_deinit(txbuf0);}
+#endif
+#ifdef RSCS_UART_USETXBUFFER1
+		if(bus->UDR == &UDR1) {rscs_ringbuf_deinit(rxbuf1);rscs_ringbuf_deinit(txbuf1);}
+#endif
 }
 
 
@@ -160,20 +198,20 @@ void rscs_uart_set_stop_bits(rscs_uart_bus_t * bus, rscs_uart_stopbits_t stopbit
 	}
 }
 
-
-void rscs_uart_write(rscs_uart_bus_t * bus, const void * dataptr, size_t datasize)
+//Функция для записи без буферизации
+void _rscs_uart_write_wobuf(rscs_uart_bus_t * bus, const void * dataptr, size_t datasize)
 {
 	const uint8_t * const data = (const uint8_t*)dataptr;
 	for (size_t i = 0; i < datasize; i++)
 	{
-		while ( !(bus->UCSRA & (1 << UDRE0)) )
+		while ( !(*bus->UCSRA & (1 << UDRE0)) )
 		{}
-		bus->UDR = data[i];
+		*bus->UDR = data[i];
 	}
 }
 
-
-void rscs_uart_read(rscs_uart_bus_t * bus, void * dataptr, size_t datasize)
+//Функция для чтения без буферизации
+void _rscs_uart_read_wobuf(rscs_uart_bus_t * bus, void * dataptr, size_t datasize)
 {
 	uint8_t * const data = (uint8_t*)dataptr;
 
@@ -184,3 +222,58 @@ void rscs_uart_read(rscs_uart_bus_t * bus, void * dataptr, size_t datasize)
 	}
 }
 
+//Функция для записи с буферизацией
+void _rscs_uart_write_wbuf(rscs_uart_id_t id) {
+	uint8_t data;
+
+#ifdef RSCS_UART_USETXBUFFER0
+	if(id == RSCS_UART_ID_UART0) {
+		if(rscs_ringbuf_pop(txbuf0, &data) == RSCS_E_BUSY) return;
+		UDR0 = data;
+	}
+#endif
+
+#ifdef RSCS_UART_USETXBUFFER1
+	if(id == RSCS_UART_ID_UART1) {
+		if(rscs_ringbuf_pop(txbuf1, &data) == RSCS_E_BUSY) return;
+		UDR1 = data;
+	}
+#endif
+}
+
+//Функция для чтения с буферизацией
+void _rscs_uart_read_wbuf(rscs_uart_id_t id) {
+#ifdef RSCS_UART_USERXBUFFER0
+	if(id == RSCS_UART_ID_UART0) {
+		rscs_ringbuf_push(rxbuf0, UDR0); //FIXME что делать, если в буфер не влезает?
+	}
+#endif
+
+#ifdef RSCS_UART_USETXBUFFER1
+	if(id == RSCS_UART_ID_UART1) {
+		rscs_ringbuf_push(rxbuf1, UDR1); //FIXME что делать, если в буфер не влезает?
+	}
+#endif
+}
+
+rscs_e rscs_uart_write(rscs_uart_bus_t * bus, const void * dataptr, size_t datasize){
+	const uint8_t * const data = (const uint8_t*)dataptr;
+#ifdef RSCS_UART_USETXBUFFER0
+	if(bus->UDR == &UDR0) {
+		if(datasize > (RSCS_UART_BUFSIZE - rscs_ringbuf_getsize(txbuf0))) return RSCS_E_BUSY;
+		for(int i = 0; i < datasize; i++) {rscs_ringbuf_push(txbuf0, data[i]); }
+		_rscs_uart_write_wbuf(RSCS_UART_ID_UART0);
+	return RSCS_E_NONE;
+	}
+#endif
+#ifdef RSCS_UART_USETXBUFFER1
+	if(bus->UDR == &UDR1) {
+		if(datasize > (RSCS_UART_BUFSIZE - rscs_ringbuf_getsize(txbuf1))) return RSCS_E_BUSY;
+		for(int i = 0; i < datasize; i++) {rscs_ringbuf_push(txbuf1, data[i]); }
+		_rscs_uart_write_wbuf(RSCS_UART_ID_UART1);
+	return RSCS_E_NONE;
+	}
+#endif
+	_rscs_uart_write_wobuf(bus, dataptr, datasize);
+	return RSCS_E_NONE;
+}

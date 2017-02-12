@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include "error.h"
+
 struct rscs_uart_bus;
 typedef struct rscs_uart_bus rscs_uart_bus_t;
 
@@ -60,12 +62,12 @@ void rscs_uart_set_parity(rscs_uart_bus_t * bus, rscs_uart_parity_t parity);
 void rscs_uart_set_stop_bits(rscs_uart_bus_t * bus, rscs_uart_stopbits_t stopbits);
 
 // запись на UART TX линию
-void rscs_uart_write(rscs_uart_bus_t * bus, const void * dataptr, size_t dataisize);
+rscs_e rscs_uart_write(rscs_uart_bus_t * bus, const void * dataptr, size_t dataisize);
 
 // чтение с UART RX линии
 /* следует отметить, что данная версия библиотеки не использует буферизацию и поэтому использует исключительно аппаратный
  * буффер атмеги (1 байт). Поэтому используя эту фунцию очень легко пропустить значения */
-void rscs_uart_read(rscs_uart_bus_t * bus, void * dataptr, size_t datasize);
+rscs_e rscs_uart_read(rscs_uart_bus_t * bus, void * dataptr, size_t datasize);
 
 
 #endif /* RSCS_UART_H_ */

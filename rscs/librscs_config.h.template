@@ -90,6 +90,17 @@
 // TODO: Посмотреть в даташите
 #endif
 
+// ========================================================
+// Настройки модуля UART
+// ========================================================
 
+//Использовать ли буферизацию
+//Если буферизация нужна, строчку с define нужно раскомментировать
+//#define RSCS_UART_USERXBUFFER0 //Буферизировать rx uart0
+//#define RSCS_UART_USETXBUFFER0 //Буферизировать tx uart0
+//#define RSCS_UART_USERXBUFFER1 //Буферизировать rx uart1
+//#define RSCS_UART_USETXBUFFER1 //Буферизировать tx uart1
+
+//#define RSCS_UART_BUFSIZE 50 //Размер буферов
 
 #endif /* CONFIG_H_ */
