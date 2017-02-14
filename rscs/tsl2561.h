@@ -8,8 +8,10 @@
 #ifndef TSL2561_H_
 #define TSL2561_H_
 
+#include "error.h"
+
 // Инициализация tsl2561
-void rscs_tsl2561_init(void);
+rscs_e rscs_tsl2561_init(void);
 
 // Получение данных с tsl2561
 int rscs_tsl2561_read(uint16_t luminosity);
