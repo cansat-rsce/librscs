@@ -6,8 +6,141 @@
 
 #include "../servo.h"
 
+struct rscs_servo;
+typedef struct rscs_servo rscs_servo;
 
-#define SERVO_TIM1_A_PWM_MASK ((1<<COM1A1) | (0<<COM1A0))
+#define RSCS_SERVO_COUNT (10)
+
+struct rscs_servo{
+	uint8_t id;
+	uint8_t mask;
+	int ocr;
+	rscs_servo * next;
+};
+
+struct rscs_ready_servo;
+
+struct rscs_ready_servo
+{
+	struct rscs_ready_servo * next;
+};
+
+
+rscs_servo * head;
+rscs_servo * current;
+uint8_t update;
+uint8_t new_angle;
+uint8_t new_angle_n;
+
+static inline void _init_servo(int id, rscs_servo * servo)
+{
+	servo->id = 0;
+	servo->mask = (1 << id);
+	servo->ocr = 0;
+	//servo->next
+}
+
+static rscs_servo * _find_servo_by_id(int id)
+{
+	rscs_servo * iterator = head;
+	while (iterator != NULL)
+	{
+		if (iterator->id == id)
+			return iterator;
+
+		iterator = iterator->next;
+	}
+	return NULL;
+}
+
+
+void rscs_servo_init(int n)
+{
+	head = malloc(sizeof(rscs_servo));
+	_init_servo(0, head);
+	rscs_servo * temp = head;
+	for(int i = 1; i < n; i++)
+	{
+		temp->next = malloc(sizeof(rscs_servo));
+		temp = temp->next;
+		_init_servo(i, temp);
+	}
+	current = head;
+    OCR0 = current->ocr;
+}
+
+void rscs_set_angle(int n, int angle)
+{
+	new_angle_n = n;
+	new_angle = angle;
+	update = 1;
+}
+
+void _set_angle(int n, int angle)
+{
+	rscs_servo *temp = _find_servo_by_id(n);
+	temp->ocr = angle;
+
+	if(temp == head)
+	{
+		head = temp->next;
+	}
+	else
+	{
+		rscs_servo *t = head;
+		t->next=temp->next;
+	}
+
+	rscs_servo *buf = NULL;
+	buf->next = head;
+
+	while(buf->next->ocr < temp->ocr)
+	{
+		buf = buf->next;
+	}
+	if(buf == NULL)
+	{
+		temp->next = head->next;
+		head = temp;
+	}
+	else
+	{
+		rscs_servo *t = buf->next;
+		buf->next = temp;
+		temp->next = t;
+	}
+	current = head;
+}
+
+
+ISR(TIMER0_COMP_vect)
+{
+		PORTA &= ~current->mask;
+		current = current->next;
+
+		if(current == NULL)
+		{
+			current = head;
+			if(update)
+			{
+				update = 0;
+				_set_angle(new_angle_n, new_angle);
+			}
+		}
+
+        OCR0 = current->ocr;
+}
+
+
+
+
+
+
+
+
+
+
+/*#define SERVO_TIM1_A_PWM_MASK ((1<<COM1A1) | (0<<COM1A0))
 #define SERVO_TIM1_B_PWM_MASK ((1<<COM1B1) | (0<<COM1B0))
 
 
@@ -76,7 +209,8 @@ rscs_servo_t * rscs_servo_init(rscs_servo_id_t id)
 
 void rscs_servo_deinit(rscs_servo_t * servo)
 {
-	// смотрим какой это канал и выключаем ШИП на соответствующем пине
+	// смотрим какой это канал и выключаем ШИП
+	на соответствующем пине
 	if (servo->OCR == &OCR1A)
 		TCCR1A &= ~((1<<COM1A1) | (0<<COM1A0));
 	else if (servo->OCR == &OCR1B)
@@ -104,4 +238,4 @@ void rscs_servi_set_degrees(rscs_servo_t * servo, uint8_t angle)
 	*servo->OCR =
 			(float)(servo->max_angle_ms - servo->min_angle_ms)
 			*(float)angle / 180.0f + servo->min_angle_ms;
-}
+}*/
