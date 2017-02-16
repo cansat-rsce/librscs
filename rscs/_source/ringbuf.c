@@ -6,11 +6,11 @@
 #include "../ringbuf.h"
 
 struct rscs_ringbuf{
-	uint8_t * buffer; 	//Адрес буфера в памяти
 	size_t fullsize, //Полный размер буфера
 	size, //Размер записанных данных
 	head, //Смещение головы
 	tail; //Смещение хвоста
+	uint8_t buffer[]; 	//Адрес буфера в памяти
 };
 
 rscs_ringbuf_t * rscs_ringbuf_init(size_t bufsyze){
