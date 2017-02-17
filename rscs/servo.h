@@ -15,7 +15,7 @@ typedef enum
 
 // Инициализация сервомашинки, принимающая перечесление ключей rscs_servo_id_t
 // задающих возможную к запуску сервомашинку
-rscs_servo_t * rscs_servo_init(rscs_servo_id_t id);
+//rscs_servo_t * rscs_servo_init(rscs_servo_id_t id);
 
 // Деинициализация и освобождение ресурсов.
 void rscs_servo_deinit(rscs_servo_t * servo);
