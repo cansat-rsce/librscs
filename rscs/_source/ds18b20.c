@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <rscs/onewire.h>
+#include <rscs/crc.h>
 
 /* Эта команда начинает единственное температурное преобразование.
  * По окончании данные сохраняются 2-байтовом температурном регистре,
@@ -66,6 +67,7 @@ rscs_e ds18b20_read_temperature(rscs_ds18b20_t * sensor, int16_t * value_buffer)
 	for(int i = 0; i < 9; i++) {
 		str[i] = rscs_ow_read();
 	}
+	//Проверяем контрольную сумму
 	if (str[8] != rscs_crc8(&str[0],sizeof str))
 		return RSCS_E_CHKSUM;
 	// Вычисляем значение
