@@ -66,6 +66,8 @@ rscs_e ds18b20_read_temperature(rscs_ds18b20_t * sensor, int16_t * value_buffer)
 	for(int i = 0; i < 9; i++) {
 		str[i] = rscs_ow_read();
 	}
+	if (str[8] != rscs_crc8(&str[0],sizeof str))
+		return RSCS_E_CHKSUM;
 	// Вычисляем значение
 	(*value_buffer) = str[0] | (str[1]<<8);
 	return RSCS_E_NONE;
