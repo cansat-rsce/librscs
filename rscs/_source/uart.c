@@ -92,6 +92,7 @@ rscs_uart_bus_t * rscs_uart_init(rscs_uart_id_t id, int flags)
 	if ((flags & RSCS_UART_FLAG_ENABLE_RX) && (flags & RSCS_UART_FLAG_BUFFER_RX))
 	{
 		*bus->UCSRB |= (1 << RXCIE0);
+		sei();
 		bus->rxbuf = rscs_ringbuf_init(RSCS_UART_BUFSIZE_RX);
 	}
 	else
@@ -229,8 +230,19 @@ void rscs_uart_write(rscs_uart_bus_t * bus, const void * dataptr, size_t datasiz
 	const uint8_t * const data = (const uint8_t*)dataptr;
 
 #ifdef RSCS_UART_USEBUFFERS
-	if (bus->txbuf != NULL)
-	{
+	if (bus->txbuf == NULL) {
+#endif
+		// Если буфер отключён, действуем по-старинке
+		for (size_t i = 0; i < datasize; i++)
+		{
+			while ( !(*bus->UCSRA & (1 << UDRE0)) )
+			{}
+			*bus->UDR = data[i];
+
+		}
+#ifdef RSCS_UART_USEBUFFERS
+	}
+	else {
 		// если буферизация доступна и разрешена - просто дергаем write_some
 		// пока она не запишет все что может
 		size_t written = 0;
@@ -241,16 +253,8 @@ void rscs_uart_write(rscs_uart_bus_t * bus, const void * dataptr, size_t datasiz
 
 		return;
 	}
-#else
-	// в противном случае действум по старинке
-	for (size_t i = 0; i < datasize; i++)
-	{
-		while ( !(*bus->UCSRA & (1 << UDRE0)) )
-		{}
-		*bus->UDR = data[i];
-
-	}
 #endif
+
 }
 
 
@@ -259,7 +263,19 @@ void rscs_uart_read(rscs_uart_bus_t * bus, void * dataptr, size_t datasize)
 	uint8_t * const data = (uint8_t*)dataptr;
 
 #ifdef RSCS_UART_USEBUFFERS
-	if (bus->rxbuf != NULL)
+	if (bus->rxbuf == NULL)
+#endif
+	{
+		// Если буфер отключён глобально, действуем по-старинке
+
+		for (size_t i = 0; i < datasize; i++)
+		{
+			while (0 == (*bus->UCSRA & (1 << RXC0))) {} // ждем пока в буффере что-нибудь не появится
+			data[i] = *bus->UDR;
+		}
+#ifdef RSCS_UART_USEBUFFERS
+	}
+	else
 	{
 		// если буферизация доступна и разрешена - просто дергаем read_some
 		// пока она не прочитает сколько нам надо
@@ -268,23 +284,14 @@ void rscs_uart_read(rscs_uart_bus_t * bus, void * dataptr, size_t datasize)
 		{
 			readed += rscs_uart_read_some(bus, data+readed, datasize-readed);
 		}
-
 		return;
-	}
-#else
-	// в противном случае действуем по-старинке
-
-	for (size_t i = 0; i < datasize; i++)
-	{
-		while (0 == (*bus->UCSRA & (1 << RXC0))) {} // ждем пока в буффере что-нибудь не появится
-		data[i] = *bus->UDR;
 	}
 #endif
 }
 
 
 
-#ifdef RSCS_UART_USEBUFFERSrscs_uart_write_some
+#ifdef RSCS_UART_USEBUFFERS
 
 size_t rscs_uart_write_some(rscs_uart_bus_t * bus, const void * dataptr, size_t datasize)
 {
@@ -297,7 +304,6 @@ size_t rscs_uart_write_some(rscs_uart_bus_t * bus, const void * dataptr, size_t 
 	{
 		if (rscs_ringbuf_push(bus->txbuf, data[written]) != RSCS_E_NONE)
 			break;
-
 		written++;
 	}
 
@@ -306,7 +312,8 @@ size_t rscs_uart_write_some(rscs_uart_bus_t * bus, const void * dataptr, size_t 
 	// в регистр соотетствующего уарта
 	// вполне возможно, что эта цепь уже запущена - еще не отправлена предидущая порция
 	// так или иначе - нам достаточно просто разрешить прерывание на событие пустого выходного регистра
-	*bus->UCSRB |= (1 << UDRE0);
+	*bus->UCSRB |= (1 << UDRE0); //FIXME if(written)
+	sei();
 
 	// возвращаем сколько удалось записать
 	return written;
@@ -322,7 +329,7 @@ size_t rscs_uart_read_some(rscs_uart_bus_t * bus, void * dataptr, size_t datasiz
 	// или мы не прочитаем достаточно
 	while (readed < datasize)
 	{
-		if (rscs_ringbuf_pop(bus->txbuf, data + readed) != RSCS_E_NONE)
+		if (rscs_ringbuf_pop(bus->rxbuf, data + readed) != RSCS_E_NONE)
 			break;
 
 		readed++;
@@ -334,6 +341,7 @@ size_t rscs_uart_read_some(rscs_uart_bus_t * bus, void * dataptr, size_t datasiz
 
 inline static void _do_rx_interrupt(rscs_uart_bus_t * bus)
 {
+	PORTB ^= (1<<5);
 	rscs_ringbuf_push(bus->rxbuf, * bus->UDR);
 }
 
