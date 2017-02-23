@@ -37,7 +37,7 @@ inline static rscs_e _i2c_status_to_error(uint8_t status)
 	case I2C_SLAR_NO_ACK:
 	case I2C_WRITE_NO_ACK:
 	case I2C_READ_NO_ACK:
-		return RSCS_E_INVRESP;
+		return RSCS_E_NODEVICE;
 	};
 
 	return RSCS_E_INVARG;
@@ -51,15 +51,8 @@ void rscs_i2c_init(void)
 		rscs_i2c_set_scl_rate(100);
 
 		// сбрасываем модуль в исходное состояние
-		rscs_i2c_reset();
 		_i2c_internal_needinit = false;
 	}
-}
-
-
-void rscs_i2c_reset(void)
-{
-	TWCR &= ~(1 << TWEN);
 }
 
 
@@ -88,16 +81,15 @@ rscs_e rscs_i2c_start(void)
 }
 
 
-rscs_e rscs_i2c_stop(void)
+void rscs_i2c_stop(void)
 {
-	TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWSTO);
-	return 0;
+	TWCR = (1<<TWINT)|(0<<TWEN)|(1<<TWSTO);
 }
 
 
-rscs_e rscs_i2c_send_slaw(uint8_t slave_addr, bool read_access)
+rscs_e rscs_i2c_send_slaw(uint8_t slave_addr, rscs_i2c_slaw_mode_t mode)
 {
-	TWDR = (slave_addr << 1) | read_access;
+	TWDR = (slave_addr << 1) | (mode == rscs_i2c_slaw_read);
 	TWCR = (1<<TWINT) | (1<<TWEN);
 
 	for(int i = 0; i < RSCS_I2C_TIMEOUT_CYCLES; i++ ) {
@@ -114,6 +106,12 @@ rscs_e rscs_i2c_send_slaw(uint8_t slave_addr, bool read_access)
 	}
 
 	return RSCS_E_TIMEOUT;
+}
+
+
+rscs_e rscs_i2c_write_byte(uint8_t byte)
+{
+	return rscs_i2c_write(&byte, 1);
 }
 
 
