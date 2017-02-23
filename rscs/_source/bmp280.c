@@ -31,27 +31,27 @@ rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_par
 	uint8_t tmp;
 	rscs_i2c_init();
 	rscs_i2c_start();
-	rscs_i2c_send_slaw(descr->address, false);
+	rscs_i2c_send_slaw(descr->address, rscs_i2c_slaw_write);
 	//TODO: задефайнить адреса регистров
 	tmp = 0xD0;
 	rscs_i2c_write(&tmp, 1);
 	rscs_i2c_start();
-	rscs_i2c_send_slaw(descr->address, true);
+	rscs_i2c_send_slaw(descr->address, rscs_i2c_slaw_read);
 	rscs_i2c_read(&tmp, 1, true);
 	rscs_i2c_stop();
 	if(tmp != 0x58) return RSCS_E_INVRESP;
 
 	rscs_i2c_start();
-	rscs_i2c_send_slaw(descr->address, false);
+	rscs_i2c_send_slaw(descr->address, rscs_i2c_slaw_write);
 	tmp = 0x88;
 	rscs_i2c_write(&tmp, 1);
 	rscs_i2c_start();
-	rscs_i2c_send_slaw(descr->address, true);
+	rscs_i2c_send_slaw(descr->address, rscs_i2c_slaw_read);
 	rscs_i2c_read(&descr->calibration_values, sizeof(descr->calibration_values), true);
 	rscs_i2c_stop();
 
 	rscs_i2c_start();
-	rscs_i2c_send_slaw(descr->address, false);
+	rscs_i2c_send_slaw(descr->address, rscs_i2c_slaw_write);
 	tmp = 0xF4;
 	rscs_i2c_write(&tmp, 1);
 	tmp = (params->temperature_oversampling << 5) | (params->pressure_oversampling << 2);
@@ -76,7 +76,7 @@ const rscs_bmp280_calibration_values_t * rscs_bmp280_get_calibration_values(rscs
 rscs_e rscs_bmp280_changemode(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_mode_t mode){
 	uint8_t tmp;
 	rscs_i2c_start();
-	rscs_i2c_send_slaw(bmp->address, false);
+	rscs_i2c_send_slaw(bmp->address, rscs_i2c_slaw_write);
 	tmp = 0xF4;
 	rscs_i2c_write(&tmp, 1);
 	tmp = (bmp->parameters.temperature_oversampling << 5) |
@@ -91,11 +91,11 @@ rscs_e rscs_bmp280_changemode(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_mode_t
 rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, uint32_t * rawpress, uint32_t * rawtemp){
 	uint8_t tmp[6];
 	rscs_i2c_start();
-	rscs_i2c_send_slaw(bmp->address, false);
+	rscs_i2c_send_slaw(bmp->address, rscs_i2c_slaw_write);
 	tmp[0] = 0xF7;
 	rscs_i2c_write(tmp, 1);
 	rscs_i2c_start();
-	rscs_i2c_send_slaw(bmp->address, true);
+	rscs_i2c_send_slaw(bmp->address, rscs_i2c_slaw_read);
 	rscs_i2c_read(tmp, 6, true);
 	rscs_i2c_stop();
 	*rawpress = (tmp[0] << 12) | (tmp[1] << 4) | (tmp[2] >> 4);
