@@ -8,6 +8,8 @@
 #ifndef RINGBUF_H_
 #define RINGBUF_H_
 
+#include "error.h"
+
 //Структура, описывающая кольцевой буфер
 struct rscs_ringbuf;
 typedef struct rscs_ringbuf rscs_ringbuf_t;

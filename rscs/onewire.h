@@ -43,6 +43,12 @@ void rscs_ow_init_bus(void);
 // Команда OW - RESET. Возвращает true, если был получен импульс присутсвия от ведомых на шине
 bool rscs_ow_reset(void);
 
+// Передача бита по OW шине
+void rscs_ow_write_bit(bool value);
+
+// чтение бита с OW шины
+bool rscs_ow_read_bit(void);
+
 // Передача байта на OW шину
 /* байт записывается млашим битом вперед */
 void rscs_ow_write(uint8_t byte);
