@@ -60,7 +60,7 @@ rscs_e rscs_tsl2561_init(void)
 		return error;
 
 	// передаем адрес ведомого в режиме на запись
-	GOTO_END_IF_ERROR(rscs_i2c_send_slaw(tsl2561_addr1, 0));
+	GOTO_END_IF_ERROR(rscs_i2c_send_slaw(tsl2561_addr1, rscs_i2c_slaw_write));
 
 	write_reg_value(CONTROL_REG_ADDR, 0b00000011); // младшие биты 11 означают, питание ВКЛ
 	write_reg_value(CONTROL_REG_ADDR, 0b00000011); // младшие биты 11 означают, питание ВКЛ
