@@ -3,9 +3,28 @@
 
 #include "i2c.h"
 
+//Возможные адреса датчика
 #define RSCS_BMP280_ADDR_LOW 0xEC //Когда пин адреса к земле
 #define RSCS_BMP280_ADDR_HIGH 0xEE //Когда пин адреса к 5v
 
+//Адреса регистров устройства
+#define RSCS_BMP280_REG_CALVAL_START 0x88
+#define RSCS_BMP280_REG_ID 0xD0
+#define RSCS_BMP280_REG_RESET 0xE0
+#define RSCS_BMP280_REG_STATUS 0xF3
+#define RSCS_BMP280_REG_CTRL_MEAS 0xF4
+#define RSCS_BMP280_REG_CONFIG 0xF5
+#define RSCS_BMP280_REG_PRESS_MSB 0xF7
+#define RSCS_BMP280_REG_PRESS_LSB 0xF8
+#define RSCS_BMP280_REG_PRESS_XLSB 0xF9
+#define RSCS_BMP280_REG_TEMP_MSB 0xFA
+#define RSCS_BMP280_REG_TEMP_LSB 0xFB
+#define RSCS_BMP280_REG_TEMP_XLSB 0xFC
+
+//Правильное содержимое регистра ID
+#define RSCS_BMP280_IDCODE 0x58
+
+//Выбор типа с плавающей точкой для обработки измерений
 typedef double rscs_bmp280_fp_t;
 
 //Количество измерений на один результат. Выставляется отдельно для термометра и барометра
@@ -72,10 +91,11 @@ typedef struct {
 	rscs_bmp280_filter_t filter;
 } rscs_bmp280_parameters_t;
 
+//Дескриптор датчика, содержимое недоступно извне
 struct rscs_bmp280_descriptor;
-
 typedef struct rscs_bmp280_descriptor rscs_bmp280_descriptor_t;
 
+//Структура сырых данных
 typedef struct {
 	uint32_t rawpress, //Сырые данные давления
 	rawtemp; //Сырые данные температуры
