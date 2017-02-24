@@ -2,9 +2,9 @@
 
 #include <avr/io.h>
 
-#include "librscs_config.h"
+//#include "librscs_config.h"
 
-#include "../servo.h"
+//#include "../servo.h"
 
 struct rscs_servo;
 typedef struct rscs_servo rscs_servo;
@@ -22,6 +22,8 @@ rscs_servo * current;
 uint8_t update_servo;
 uint8_t new_angle;
 uint8_t new_angle_n;
+
+void _timer_int();
 
 static inline void _init_servo(int id, rscs_servo * servo)
 {
@@ -110,8 +112,12 @@ void _set_angle(int n, int ocr)
 
 ISR(TIMER0_COMP_vect)
 {
+        do
+        {
 		PORTA &= ~current->mask;
 		current = current->next;
+        }while(current->next != NULL && 
+                current->next->ocr == current->ocr);
 
 		if(current == NULL)
 		{
