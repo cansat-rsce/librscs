@@ -14,6 +14,6 @@
 rscs_e rscs_tsl2561_init(void);
 
 // Получение данных с tsl2561
-int rscs_tsl2561_read(uint16_t luminosity);
+uint16_t rscs_tsl2561_read(uint8_t *PD0LOW_ptr, uint8_t *PD0HIGH_ptr, uint8_t *PD1LOW_ptr, uint8_t *PD1HIGH_ptr);
 
 #endif /* TSL2561_H_ */
