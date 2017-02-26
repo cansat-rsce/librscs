@@ -1,10 +1,12 @@
 #include <stdlib.h>
 
+#include <util/atomic.h>
+
 #include <avr/io.h>
 
-//#include "librscs_config.h"
+#include "librscs_config.h"
 
-//#include "../servo.h"
+#include "../servo.h"
 
 struct rscs_servo;
 typedef struct rscs_servo rscs_servo;
@@ -14,14 +16,12 @@ struct rscs_servo{
 	uint8_t id;
 	uint8_t mask;
 	int ocr;
+	int new_ocr;
 	rscs_servo * next;
 };
 
 rscs_servo * head;
 rscs_servo * current;
-uint8_t update_servo;
-uint8_t new_angle;
-uint8_t new_angle_n;
 
 void _timer_int();
 
@@ -30,6 +30,7 @@ static inline void _init_servo(int id, rscs_servo * servo)
 	servo->id = 0;
 	servo->mask = (1 << id);
 	servo->ocr = 0;
+	servo->new_ocr = -1;
 }
 
 void _include_servo(rscs_servo *in)
@@ -58,25 +59,19 @@ void _include_servo(rscs_servo *in)
 		}
 	}
 }
-static rscs_servo * _exclude_servo_by_id(int id)
+static void _exclude_servo(rscs_servo *tmp)
 {
-	rscs_servo *tmp = head;
-	if(tmp->id == id)
+	if(tmp == head)
 	{
 		head = tmp->next;
-		return tmp;
+		return;
 	}
-	while(tmp != NULL && tmp->id != id)
+	rscs_servo *previous = head;
+	while(previous->next != tmp)
 	{
-		tmp = tmp->next;
+		previous = previous->next;
 	}
-	if(tmp != NULL)
-	{
-		rscs_servo *res = tmp->next;
-		tmp->next = tmp->next->next;
-		return res;
-	}
-	return NULL;
+	previous->next = tmp->next;
 }
 
 
@@ -95,18 +90,26 @@ void rscs_servo_init(int n)
     OCR0 = current->ocr;
 }
 
-void rscs_set_angle(int n, int angle)
+void rscs_servo_set_angle(int n, int angle)
 {
-	new_angle_n = n;
-	new_angle = angle;
-	update_servo = 1;
+	rscs_servo *t = head;
+	while(t != NULL && t->id != n)
+	{
+		t = t->next;
+	}
+	if(t == NULL) { return;}
+	t->new_ocr = angle;
 }
 
-void _set_angle(int n, int ocr)
+void _set_angle(rscs_servo *servo)
 {
-	rscs_servo *tmp = _exclude_servo_by_id(n);
-	tmp->ocr = ocr;
-	_include_servo(tmp);
+	if(servo->new_ocr >= 0)
+	{
+		_exclude_servo(servo);
+		servo->ocr = servo->new_ocr;
+		servo->new_ocr = -1;
+		_include_servo(servo);
+	}
 }
 
 
@@ -121,10 +124,11 @@ ISR(TIMER0_COMP_vect)
 
 		if(current == NULL)
 		{
-			if(update_servo)
+			current = head;
+			while(current != NULL)
 			{
-				update_servo = 0;
-				_set_angle(new_angle_n, new_angle);
+				_set_angle(current);
+				current = current->next;
 			}
 			current = head;
 		}
