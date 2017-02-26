@@ -101,7 +101,7 @@ void rscs_servo_set_angle(int n, int angle)
 	t->new_ocr = angle;
 }
 
-void _set_angle(rscs_servo *servo)
+int _set_angle(rscs_servo *servo)
 {
 	if(servo->new_ocr >= 0)
 	{
@@ -109,6 +109,11 @@ void _set_angle(rscs_servo *servo)
 		servo->ocr = servo->new_ocr;
 		servo->new_ocr = -1;
 		_include_servo(servo);
+		return 1;
+	}
+	else
+	{
+		return 0;
 	}
 }
 
@@ -127,7 +132,10 @@ ISR(TIMER0_COMP_vect)
 			current = head;
 			while(current != NULL)
 			{
-				_set_angle(current);
+				if(_set_angle(current))
+				{
+					current = head;
+				}
 				current = current->next;
 			}
 			current = head;
