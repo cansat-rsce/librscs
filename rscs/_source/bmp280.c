@@ -4,9 +4,57 @@
 #include "../bmp280.h"
 
 #include "../i2c.h"
+#include "../spi.h"
+
+#include "librscs_config.h"
+
+//Далее определены макросы для удобного написания кода, все они #undef в конце файла
 
 //Макрос для возможности обработки ошибок
 #define OPERATION(OP) error = OP if(error != RSCS_E_NONE) goto end;
+
+//Макрос инициализации SPI
+#define INITSPI \
+	RSCS_BMP280_CSDDR |= (1 << RSCS_BMP280_CSPIN); \
+	RSCS_BMP280_CSPORT |= (1 << RSCS_BMP280_CSPIN); \
+	rscs_spi_init();
+
+//Макрос чтения регистров по SPI
+#define READREGSPI(REG, DATA, COUNT) \
+	uint8_t * data = (uint8_t *) DATA; \
+	RSCS_BMP280_CSPORT &= ~(1 << RSCS_BMP280_CSPIN); \
+	for(int i = 0; i < COUNT; i++) { \
+		OPERATION(	rscs_spi_do( (REG + i) | (1 << 8) ); ) \
+		OPERATION(	data[i] = rscs_spi_do(0xFF); ) \
+	} \
+	RSCS_BMP280_CSPORT |= (1 << RSCS_BMP280_CSPIN);
+
+//Макрос записи регистров по SPI
+#define WRITEREGSPI(REG, DATA, COUNT) \
+	uint8_t * data = (uint8_t *) DATA; \
+	RSCS_BMP280_CSPORT &= ~(1 << RSCS_BMP280_CSPIN); \
+	for(int i = 0; i < COUNT; i++) { \
+		OPERATION(	rscs_spi_do( (REG + i) & ~(1 << 8) ); ) \
+		OPERATION(	rscs_spi_do(data[i]); ) \
+	} \
+	RSCS_BMP280_CSPORT |= (1 << RSCS_BMP280_CSPIN);
+
+//Выбор используемых макросов в зависимости от выбранного интерфейса
+#if RSCS_BMP280_IF == SPI
+
+#define IFINIT INITSPI
+#define READREG(REG, DATA, COUNT) READREGSPI(REG, DATA, COUNT)
+#define WRITEREG(REG, DATA, COUNT) WRITEREGSPI(REG, DATA, COUNT)
+
+#elif RSCS_BMP280_IF == I2C
+
+#error "BMP280: не написан обмен по I2C"
+
+#else
+
+#error "BMP280: некорректное значение интерфейса"
+
+#endif
 
 /*Дескриптор датчика.
  *Поле mode заполняется rscs_bmp280_changemode()*/
@@ -20,7 +68,6 @@ struct rscs_bmp280_descriptor {
 };
 //TODO подумать над названием
 rscs_bmp280_descriptor_t * rscs_bmp280_init(i2c_addr_t address){
-
 	rscs_bmp280_descriptor_t * pointer = (rscs_bmp280_descriptor_t *) malloc(sizeof(rscs_bmp280_descriptor_t));
 	pointer->address = address;
 	return pointer;
@@ -32,34 +79,22 @@ void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr){
 
 rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_parameters_t * params){
 	rscs_e error = RSCS_E_NONE;
-	uint8_t tmp;
+	uint8_t tmp[2];
 
-	rscs_i2c_init();
-	OPERATION(rscs_i2c_start();)
-	OPERATION(rscs_i2c_send_slaw(descr->address, rscs_i2c_slaw_write);)
-	OPERATION(rscs_i2c_write_byte(RSCS_BMP280_REG_ID);)
-	OPERATION(rscs_i2c_start();)
-	OPERATION(rscs_i2c_send_slaw(descr->address, rscs_i2c_slaw_read);)
-	OPERATION(rscs_i2c_read(&tmp, 1, true);)
+	IFINIT
+	READREG(RSCS_BMP280_REG_ID, tmp, 1)
+
+	if(tmp[0] != RSCS_BMP280_IDCODE) return RSCS_E_INVRESP;
+
+	READREG(RSCS_BMP280_REG_CALVAL_START, &(descr->calibration_values), sizeof(descr->calibration_values))
 	rscs_i2c_stop();
 
-	if(tmp != RSCS_BMP280_IDCODE) return RSCS_E_INVRESP;
 
-	OPERATION(rscs_i2c_start();)
-	OPERATION(rscs_i2c_send_slaw(descr->address, rscs_i2c_slaw_write);)
-	OPERATION(rscs_i2c_write_byte(RSCS_BMP280_REG_CALVAL_START);)
-	OPERATION(rscs_i2c_start();)
-	OPERATION(rscs_i2c_send_slaw(descr->address, rscs_i2c_slaw_read);)
-	OPERATION(rscs_i2c_read(&descr->calibration_values, sizeof(descr->calibration_values), true);)
-	rscs_i2c_stop();
-
-	OPERATION(rscs_i2c_start();)
-	OPERATION(rscs_i2c_send_slaw(descr->address, rscs_i2c_slaw_write);)
-	OPERATION(rscs_i2c_write_byte(RSCS_BMP280_REG_CTRL_MEAS);)
-	OPERATION(rscs_i2c_write_byte(	(params->temperature_oversampling << 5) |
-									(params->pressure_oversampling << 2));)
-	OPERATION(rscs_i2c_write_byte(	(params->standbytyme << 5) |
-									(params->filter << 2));)
+	tmp[0] = 	(params->temperature_oversampling << 5) |
+				(params->pressure_oversampling << 2);
+	tmp[1] = 	(params->standbytyme << 5) |
+				(params->filter << 2);
+	WRITEREG(RSCS_BMP280_REG_CTRL_MEAS, tmp, 2)
 
 	descr->parameters = *params;
 
@@ -78,13 +113,11 @@ const rscs_bmp280_calibration_values_t * rscs_bmp280_get_calibration_values(rscs
 
 rscs_e rscs_bmp280_changemode(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_mode_t mode){
 	rscs_e error = RSCS_E_NONE;
+	uint8_t tmp = (	bmp->parameters.temperature_oversampling << 5) |
+			(bmp->parameters.pressure_oversampling << 2) |
+			mode;
 
-	OPERATION(rscs_i2c_start();)
-	OPERATION(rscs_i2c_send_slaw(bmp->address, rscs_i2c_slaw_write);)
-	OPERATION(rscs_i2c_write_byte(RSCS_BMP280_REG_CTRL_MEAS);)
-	OPERATION(rscs_i2c_write_byte((	bmp->parameters.temperature_oversampling << 5) |
-									(bmp->parameters.pressure_oversampling << 2) |
-									mode);)
+	WRITEREG(RSCS_BMP280_REG_CTRL_MEAS, &tmp, 1)
 
 end:
 	rscs_i2c_stop();
@@ -95,12 +128,7 @@ rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, uint32_t * rawpress, uin
 	rscs_e error = RSCS_E_NONE;
 	uint8_t tmp[6];
 
-	OPERATION(rscs_i2c_start();)
-	OPERATION(rscs_i2c_send_slaw(bmp->address, rscs_i2c_slaw_write);)
-	OPERATION(rscs_i2c_write_byte(RSCS_BMP280_REG_PRESS_MSB);)
-	OPERATION(rscs_i2c_start();)
-	OPERATION(rscs_i2c_send_slaw(bmp->address, rscs_i2c_slaw_read);)
-	OPERATION(rscs_i2c_read(tmp, 6, true);)
+	READREG(RSCS_BMP280_REG_PRESS_MSB, tmp, 6)
 	*rawpress = (tmp[0] << 12) | (tmp[1] << 4) | (tmp[2] >> 4);
 	*rawtemp = (tmp[3] << 12) | (tmp[4] << 4) | (tmp[5] >> 4);
 
