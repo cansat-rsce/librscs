@@ -9,11 +9,12 @@
 #define TSL2561_H_
 
 #include "error.h"
+#include <stdint.h>
 
 // Инициализация tsl2561
 rscs_e rscs_tsl2561_init(void);
 
 // Получение данных с tsl2561
-uint16_t rscs_tsl2561_read(uint8_t *PD_ARRAY[4]);
+uint16_t rscs_tsl2561_read(s);
 
 #endif /* TSL2561_H_ */
