@@ -121,7 +121,6 @@ void rscs_uart_deinit(rscs_uart_bus_t * bus)
 
 	if (bus->txbuf)
 	{
-		// TODO: Выключить прерывания!
 		rscs_ringbuf_deinit(bus->txbuf);
 	}
 #endif
@@ -263,10 +262,9 @@ void rscs_uart_read(rscs_uart_bus_t * bus, void * dataptr, size_t datasize)
 	uint8_t * const data = (uint8_t*)dataptr;
 
 #ifdef RSCS_UART_USEBUFFERS
-	if (bus->rxbuf == NULL)
+	if (bus->rxbuf == NULL) {
 #endif
-	{
-		// Если буфер отключён глобально, действуем по-старинке
+		// Если буфер отключён, действуем по-старинке
 
 		for (size_t i = 0; i < datasize; i++)
 		{
@@ -312,7 +310,7 @@ size_t rscs_uart_write_some(rscs_uart_bus_t * bus, const void * dataptr, size_t 
 	// в регистр соотетствующего уарта
 	// вполне возможно, что эта цепь уже запущена - еще не отправлена предидущая порция
 	// так или иначе - нам достаточно просто разрешить прерывание на событие пустого выходного регистра
-	*bus->UCSRB |= (1 << UDRE0); //FIXME if(written)
+	if(written) *bus->UCSRB |= (1 << UDRE0);
 	sei();
 
 	// возвращаем сколько удалось записать
