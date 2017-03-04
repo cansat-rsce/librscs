@@ -11,7 +11,9 @@ typedef struct rscs_servo rscs_servo; //Структура ещё не тип
 //Инициализация n сервомашинок
 void rscs_servo_init(int n);
 
+void rscs_servo_timer_init(void);
+
 //Установка угла n-ой сервомашинке
-void rscs_set_angle(int n, int angle);
+void rscs_servo_set_angle(int n, int angle);
 
 #endif /* SERVOFUNCTIONS_H_ */

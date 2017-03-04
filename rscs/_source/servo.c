@@ -8,6 +8,9 @@
 
 #include "../servo.h"
 
+#define PRESCALER 8
+#define TEAK_IN_MS (F_CPU / 1000)
+
 struct rscs_servo;
 typedef struct rscs_servo rscs_servo;
 
@@ -17,19 +20,57 @@ struct rscs_servo{
 	uint8_t mask;
 	int ocr;
 	int new_ocr;
+	int min;
+	int max;
 	rscs_servo * next;
 };
 
 rscs_servo * head;
 rscs_servo * current;
 
-void _timer_int();
+
+int _map(rscs_servo *t,int an)
+{
+	int max = t->max;
+	int min = t->min;
+	return (an*(max - min) + 180 * min) / 180;
+}
+
+void rscs_servo_calibrate(int n, float min_ms, float max_ms)
+{
+	rscs_servo *t = head;
+	while(t != NULL && t->id != n)
+	{
+		t = t->next;
+	}
+	if(t != NULL)
+	{
+		t->min = (int) (TEAK_IN_MS * min_ms);
+		t->max = (int) (TEAK_IN_MS * max_ms);
+	}
+}
+
+void rscs_servo_timer_init(void)
+{
+	TCCR1A |= (0<<WGM10) | (0<<WGM11); // CTC, OCR1A
+	TCCR1B |= (1<<WGM12) | (0<<WGM13)
+			| (0<<CS10) | (1<<CS11) | (0<<CS12); //prescaler - 8
+#ifdef __AVR_ATmega328P__
+	TIMSK1 |= (1<<OCIE1B) | (1<<OCIE1A);
+#elif defined __AVR_ATmega128__
+	TIMSK |= (1<<OCIE1B) | (1<<OCIE1A);
+#endif
+	OCR1A = 20 * TEAK_IN_MS / PRESCALER;
+	OCR1B = current->ocr;
+}
 
 static inline void _init_servo(int id, rscs_servo * servo)
 {
-	servo->id = 0;
+	servo->min = TEAK_IN_MS * 0.8 / PRESCALER;
+	servo->max = TEAK_IN_MS * 2.2 / PRESCALER;
+	servo->id = id;
 	servo->mask = (1 << id);
-	servo->ocr = 0;
+	servo->ocr = (servo->min+servo->max)/2;
 	servo->new_ocr = -1;
 }
 
@@ -87,7 +128,6 @@ void rscs_servo_init(int n)
 		_init_servo(i, temp);
 	}
 	current = head;
-    OCR0 = current->ocr;
 }
 
 void rscs_servo_set_angle(int n, int angle)
@@ -98,7 +138,7 @@ void rscs_servo_set_angle(int n, int angle)
 		t = t->next;
 	}
 	if(t == NULL) { return;}
-	t->new_ocr = angle;
+	t->new_ocr = _map(t, angle);
 }
 
 int _set_angle(rscs_servo *servo)
@@ -118,28 +158,35 @@ int _set_angle(rscs_servo *servo)
 }
 
 
-ISR(TIMER0_COMP_vect)
+ISR(TIMER1_COMPB_vect)
 {
-        do
-        {
-		PORTA &= ~current->mask;
+	//PORTB ^= (1 << 5);
+
+	do
+	{
+		RSCS_SERVO_PORT &= ~current->mask;
 		current = current->next;
-        }while(current->next != NULL && 
-                current->next->ocr == current->ocr);
+	} while (current->next != NULL && current->next->ocr == current->ocr);
 
-		if(current == NULL)
+	if(current == NULL)
+	{
+		current = head;
+		while(current != NULL)
 		{
-			current = head;
-			while(current != NULL)
+			if(_set_angle(current))
 			{
-				if(_set_angle(current))
-				{
-					current = head;
-				}
-				current = current->next;
+				current = head;
 			}
-			current = head;
+			current = current->next;
 		}
+		current = head;
+	}
 
-        OCR0 = current->ocr;
+	OCR1B = current->ocr;
+}
+
+ISR(TIMER1_COMPA_vect)
+{
+	//PORTB ^= (1 << 5);
+	RSCS_SERVO_PORT = 0xFF;
 }
