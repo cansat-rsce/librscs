@@ -12,7 +12,7 @@ inline static uint8_t _spi_do_inline(uint8_t value)
 	return SPDR;
 }
 
-
+//TODO добавить дефолтную частоту, полярность, порядок
 void rscs_spi_init(void)
 {
 	/*настройка портов ввода-вывода: все на вывод, кроме MISO */
@@ -33,7 +33,7 @@ void rscs_spi_set_clk(uint32_t clock_kHz)
 	SPCR &= ~((1 << SPR0) | (1 << SPR1));
 	SPSR &= ~(1 << SPI2X);
 
-	const uint8_t divisor = F_CPU/clock_kHz;
+	const uint8_t divisor = F_CPU/1000/clock_kHz;
 
 	// начинаем с самого быстрого варианта
 	// и проверяя все диапазоны округляем до меньшего делителя
