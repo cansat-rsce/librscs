@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "../bmp280.h"
 
@@ -17,25 +18,28 @@
 #define INITSPI \
 	RSCS_BMP280_CSDDR |= (1 << RSCS_BMP280_CSPIN); \
 	RSCS_BMP280_CSPORT |= (1 << RSCS_BMP280_CSPIN); \
-	rscs_spi_init();
+	rscs_spi_init();\
+	rscs_spi_set_clk(1); \
+	rscs_spi_set_pol(RSCS_SPI_POL_SAMPLE_RISE_SETUP_FALL); \
+	rscs_spi_set_order(RSCS_SPI_ORDER_MSB_FIRST);
 
 //Макрос чтения регистров по SPI
 #define READREGSPI(REG, DATA, COUNT) \
-	uint8_t * data = (uint8_t *) DATA; \
-	RSCS_BMP280_CSPORT &= ~(1 << RSCS_BMP280_CSPIN); \
+	RSCS_BMP280_CSPORT &= ~(1 << RSCS_BMP280_CSPIN);\
+	rscs_spi_do( REG | (1 << 8) ); \
 	for(int i = 0; i < COUNT; i++) { \
-		OPERATION(	rscs_spi_do( (REG + i) | (1 << 8) ); ) \
-		OPERATION(	data[i] = rscs_spi_do(0xFF); ) \
+		((uint8_t *)DATA)[i] = rscs_spi_do(0xFF); \
 	} \
 	RSCS_BMP280_CSPORT |= (1 << RSCS_BMP280_CSPIN);
 
 //Макрос записи регистров по SPI
 #define WRITEREGSPI(REG, DATA, COUNT) \
-	uint8_t * data = (uint8_t *) DATA; \
-	RSCS_BMP280_CSPORT &= ~(1 << RSCS_BMP280_CSPIN); \
+	RSCS_BMP280_CSPORT &= ~(1 << RSCS_BMP280_CSPIN);\
 	for(int i = 0; i < COUNT; i++) { \
-		OPERATION(	rscs_spi_do( (REG + i) & ~(1 << 8) ); ) \
-		OPERATION(	rscs_spi_do(data[i]); ) \
+		printf("BMP280: WRITEREG 1\n"); \
+		rscs_spi_do( ((REG + i) & ~(1 << 8)) ); \
+		printf("BMP280: WRITEREG 2\n"); \
+		rscs_spi_do((((uint8_t *)DATA)[i])); \
 	} \
 	RSCS_BMP280_CSPORT |= (1 << RSCS_BMP280_CSPIN);
 
@@ -80,15 +84,27 @@ void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr){
 rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_parameters_t * params){
 	rscs_e error = RSCS_E_NONE;
 	uint8_t tmp[2];
-
+	tmp[0] = 231;
+	for(int i = 0; i < sizeof(descr->calibration_values); i++) {
+		*( ( (uint8_t *) &descr->calibration_values) + i ) = 0;
+	}
+	printf("BMP280: SETUP: trying to IFINIT\n");
 	IFINIT
+	printf("BMP280: SETUP: trying to read ID reg\n");
 	READREG(RSCS_BMP280_REG_ID, tmp, 1)
 
-	if(tmp[0] != RSCS_BMP280_IDCODE) return RSCS_E_INVRESP;
+	printf("BMP280: returned IDCODE %d\n", tmp[0]);
+	if(tmp[0] != RSCS_BMP280_IDCODE) {
+		return RSCS_E_INVRESP;
+	}
 
 	READREG(RSCS_BMP280_REG_CALVAL_START, &(descr->calibration_values), sizeof(descr->calibration_values))
-	rscs_i2c_stop();
 
+	printf("BMP280: calvals: ");
+	for(int i = 0; i < sizeof(descr->calibration_values); i++) {
+		printf("%d ", *( ( (uint8_t *) &descr->calibration_values) + i ) );
+	}
+	printf("\n");
 
 	tmp[0] = 	(params->temperature_oversampling << 5) |
 				(params->pressure_oversampling << 2);
@@ -99,7 +115,7 @@ rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_par
 	descr->parameters = *params;
 
 end:
-	rscs_i2c_stop();
+	printf("BMP280: SETUP: returning %d\n", error);
 	return error;
 }
 
@@ -120,7 +136,7 @@ rscs_e rscs_bmp280_changemode(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_mode_t
 	WRITEREG(RSCS_BMP280_REG_CTRL_MEAS, &tmp, 1)
 
 end:
-	rscs_i2c_stop();
+	printf("BMP280: CHMODE: returning %d\n", error);
 	return error;
 }
 
@@ -133,8 +149,19 @@ rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, uint32_t * rawpress, uin
 	*rawtemp = (tmp[3] << 12) | (tmp[4] << 4) | (tmp[5] >> 4);
 
 end:
-	rscs_i2c_stop();
+	printf("BMP280: READ: returning %d\n", error);
 	return error;
+}
+
+uint8_t rscs_bmp280_read_status(rscs_bmp280_descriptor_t * bmp) {
+	rscs_e error = RSCS_E_NONE;
+	uint8_t status = 255;
+
+	READREG(RSCS_BMP280_REG_STATUS, &status, 1)
+
+end:
+	printf("BMP280: READ: returning %d\n", error);
+	return status;
 }
 
 #undef OPERATION

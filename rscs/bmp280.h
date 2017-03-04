@@ -95,12 +95,6 @@ typedef struct {
 struct rscs_bmp280_descriptor;
 typedef struct rscs_bmp280_descriptor rscs_bmp280_descriptor_t;
 
-//Структура сырых данных
-typedef struct {
-	uint32_t rawpress, //Сырые данные давления
-	rawtemp; //Сырые данные температуры
-} rscs_bmp280_rawdata_t;
-
 // Создание дескриптора датчика
 // Не инициализирует сам датчик.
 rscs_bmp280_descriptor_t * rscs_bmp280_init(i2c_addr_t address);
@@ -132,5 +126,7 @@ rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, uint32_t * rawpress, uin
 //Рассчёт давления и температуры из сырых значений.
 //WARNING: на ATMega очень медленно и неточно, лучше считать на земле
 void rscs_bmp280_calculate(uint32_t rawpress, uint32_t rawtemp, rscs_bmp280_fp_t * press_p, rscs_bmp280_fp_t * temp_p);
+
+uint8_t rscs_bmp280_read_status(rscs_bmp280_descriptor_t * bmp);
 
 #endif /* BMP280_H_ */
