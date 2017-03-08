@@ -77,7 +77,7 @@ typedef struct {
 } rscs_bmp280_calibration_values_t;
 #pragma pack(pop)
 
-/*Параметры датчика. Все поля, кроме mode, заполняются пользователем в самой структуре
+/*Параметры датчика. Все поля заполняются пользователем в самой структуре
  *перед вызовом rscs_bmp280_init()
  *Поле mode заполняется rscs_bmp280_changemode()*/
 typedef struct {
@@ -111,6 +111,9 @@ rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_par
    хранится в самом датчике. Указатель действителен до тех пор, пока не будет
    вызвана rscs_bmp280_deinit для этого дескриптора */
 const rscs_bmp280_parameters_t * rscs_bmp280_get_config(rscs_bmp280_descriptor_t * descr);
+
+//Отправляет датчику и сохраняет локально новые настройки params
+rscs_e rscs_bmp280_set_config(rscs_bmp280_descriptor_t * descr, rscs_bmp280_parameters_t * params);
 
 // Возвращает указатель на значения калибровоных коэффициентов датчика
 /*  Указатель действителен до тех пор, пока не будет

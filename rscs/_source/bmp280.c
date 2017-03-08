@@ -19,14 +19,14 @@
 	RSCS_BMP280_CSDDR |= (1 << RSCS_BMP280_CSPIN); \
 	RSCS_BMP280_CSPORT |= (1 << RSCS_BMP280_CSPIN); \
 	rscs_spi_init();\
-	rscs_spi_set_clk(1); \
+	rscs_spi_set_clk(RSCS_BMP280_SPI_FREQ_kHz); \
 	rscs_spi_set_pol(RSCS_SPI_POL_SAMPLE_RISE_SETUP_FALL); \
-	rscs_spi_set_order(RSCS_SPI_ORDER_MSB_FIRST);
+ 	rscs_spi_set_order(RSCS_SPI_ORDER_MSB_FIRST);
 
 //Макрос чтения регистров по SPI
 #define READREGSPI(REG, DATA, COUNT) \
 	RSCS_BMP280_CSPORT &= ~(1 << RSCS_BMP280_CSPIN);\
-	rscs_spi_do( REG | (1 << 8) ); \
+	rscs_spi_do( (uint8_t) (REG | (1 << 8)) ); \
 	for(int i = 0; i < COUNT; i++) { \
 		((uint8_t *)DATA)[i] = rscs_spi_do(0xFF); \
 	} \
@@ -121,6 +121,23 @@ end:
 
 const rscs_bmp280_parameters_t * rscs_bmp280_get_config(rscs_bmp280_descriptor_t * descr){
 	return &descr->parameters;
+}
+
+rscs_e rscs_bmp280_set_config(rscs_bmp280_descriptor_t * descr, rscs_bmp280_parameters_t * params) {
+	rscs_e error = RSCS_E_NONE;
+
+	uint8_t tmp[2];
+
+	tmp[0] = 	(params->temperature_oversampling << 5) |
+				(params->pressure_oversampling << 2);
+	tmp[1] = 	(params->standbytyme << 5) |
+				(params->filter << 2);
+	WRITEREG(RSCS_BMP280_REG_CTRL_MEAS, tmp, 2)
+
+	descr->parameters = *params;
+
+end:
+	return error;
 }
 
 const rscs_bmp280_calibration_values_t * rscs_bmp280_get_calibration_values(rscs_bmp280_descriptor_t * descr){
