@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <util/atomic.h>
 
@@ -25,15 +26,29 @@ struct rscs_servo{
 	rscs_servo * next;
 };
 
+
 rscs_servo * head;
 rscs_servo * current;
 
+/*void  display()
+{
+	return;
+	printf("display-entry\n");
+	rscs_servo *t = head;
+	while(t != NULL)
+	{
+		printf("Servo num:%d; Servo ocr:%d; Servo pnt:%pd\n", t->id, t->ocr, t);
+		t = t->next;
+	}
+}*/
 
 int _map(rscs_servo *t,int an)
 {
 	int max = t->max;
 	int min = t->min;
-	return (an*(max - min) + 180 * min) / 180;
+	int retval = ((float)an*(max - min) + 180.0 * min) / 180.0;
+	//printf("min = %d; max = %d; retval = %d\n", min, max, retval);
+	return retval;
 }
 
 void rscs_servo_calibrate(int n, float min_ms, float max_ms)
@@ -52,6 +67,10 @@ void rscs_servo_calibrate(int n, float min_ms, float max_ms)
 
 void rscs_servo_timer_init(void)
 {
+	//display();
+	OCR1A = 20 * TEAK_IN_MS / PRESCALER;
+	OCR1B = current->ocr;
+
 	TCCR1A |= (0<<WGM10) | (0<<WGM11); // CTC, OCR1A
 	TCCR1B |= (1<<WGM12) | (0<<WGM13)
 			| (0<<CS10) | (1<<CS11) | (0<<CS12); //prescaler - 8
@@ -60,8 +79,7 @@ void rscs_servo_timer_init(void)
 #elif defined __AVR_ATmega128__
 	TIMSK |= (1<<OCIE1B) | (1<<OCIE1A);
 #endif
-	OCR1A = 20 * TEAK_IN_MS / PRESCALER;
-	OCR1B = current->ocr;
+	//display();
 }
 
 static inline void _init_servo(int id, rscs_servo * servo)
@@ -76,6 +94,13 @@ static inline void _init_servo(int id, rscs_servo * servo)
 
 void _include_servo(rscs_servo *in)
 {
+	//display();
+	if(head == NULL)
+	{
+		head = in;
+		head->next = NULL;
+		return;
+	}
 	if(in->ocr <= head->ocr)
 	{
 		in->next = head;
@@ -91,6 +116,7 @@ void _include_servo(rscs_servo *in)
 		if(tmp->next == NULL)
 		{
 			tmp->next = in;
+			tmp->next->next = NULL;
 		}
 		else
 		{
@@ -105,6 +131,7 @@ static void _exclude_servo(rscs_servo *tmp)
 	if(tmp == head)
 	{
 		head = tmp->next;
+		tmp->next = NULL;
 		return;
 	}
 	rscs_servo *previous = head;
@@ -118,6 +145,7 @@ static void _exclude_servo(rscs_servo *tmp)
 
 void rscs_servo_init(int n)
 {
+	DDRC = 0xFF; //ДОПИСАТЬ В КОНФИГ
 	head = malloc(sizeof(rscs_servo));
 	_init_servo(0, head);
 	rscs_servo * temp = head;
@@ -128,6 +156,8 @@ void rscs_servo_init(int n)
 		_init_servo(i, temp);
 	}
 	current = head;
+	temp->next = NULL;
+	//display();
 }
 
 void rscs_servo_set_angle(int n, int angle)
@@ -136,6 +166,7 @@ void rscs_servo_set_angle(int n, int angle)
 	while(t != NULL && t->id != n)
 	{
 		t = t->next;
+		//printf("set angle");
 	}
 	if(t == NULL) { return;}
 	t->new_ocr = _map(t, angle);
@@ -161,7 +192,6 @@ int _set_angle(rscs_servo *servo)
 ISR(TIMER1_COMPB_vect)
 {
 	//PORTB ^= (1 << 5);
-
 	do
 	{
 		RSCS_SERVO_PORT &= ~current->mask;
@@ -175,6 +205,7 @@ ISR(TIMER1_COMPB_vect)
 		{
 			if(_set_angle(current))
 			{
+				//printf("current_id = %d\n", current->id);
 				current = head;
 			}
 			current = current->next;
@@ -182,11 +213,11 @@ ISR(TIMER1_COMPB_vect)
 		current = head;
 	}
 
+
 	OCR1B = current->ocr;
 }
 
 ISR(TIMER1_COMPA_vect)
 {
-	//PORTB ^= (1 << 5);
 	RSCS_SERVO_PORT = 0xFF;
 }
