@@ -21,6 +21,6 @@ void rscs_servo_set_angle(int n, int angle);
 void rscs_servo_calibrate(int n, float min_ms, float max_ms);
 
 //Функция для калибровки: устанавливает конкретную длину импульса для n-ой сервомашинки
-void _servo_set_ms(int n, int ms);
+void _servo_set_mcs(int n,int mcs);
 
 #endif /* SERVOFUNCTIONS_H_ */
