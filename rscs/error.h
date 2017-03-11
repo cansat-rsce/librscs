@@ -14,6 +14,7 @@ typedef enum
 	RSCS_E_BUSY		= -5,  // вызываемое устройство занято
 	RSCS_E_NODEVICE = -6,  // нет такого устройства
 	RSCS_E_CHKSUM	= -7,  // ошибка контрольной суммы
+	RSCS_E_NULL 	= -8,  // ошибка, связанная с нулём (NPE, divide by zero и т.д.)
 } rscs_e ;
 
 
