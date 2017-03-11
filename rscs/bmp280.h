@@ -68,14 +68,12 @@ typedef enum {
 } rscs_bmp280_filter_t;
 
 //Калибровочные значения
-#pragma pack(push, 1)
 typedef struct {
 	uint16_t T1;
 	int16_t T2, T3;
 	uint16_t P1;
 	int16_t P2, P3, P4, P5, P6, P7, P8, P9;
 } rscs_bmp280_calibration_values_t;
-#pragma pack(pop)
 
 /*Параметры датчика. Все поля заполняются пользователем в самой структуре
  *перед вызовом rscs_bmp280_init()
@@ -124,11 +122,11 @@ const rscs_bmp280_calibration_values_t * rscs_bmp280_get_calibration_values(rscs
 rscs_e rscs_bmp280_changemode(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_mode_t mode);
 
 //Чтение данных из BMP(в сыром виде)
-rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, uint32_t * rawpress, uint32_t * rawtemp);
+rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, int32_t * rawpress, int32_t * rawtemp);
 
 //Рассчёт давления и температуры из сырых значений.
 //WARNING: на ATMega очень медленно и неточно, лучше считать на земле
-void rscs_bmp280_calculate(uint32_t rawpress, uint32_t rawtemp, rscs_bmp280_fp_t * press_p, rscs_bmp280_fp_t * temp_p);
+rscs_e rscs_bmp280_calculate(const rscs_bmp280_calibration_values_t * calvals , int32_t rawpress, int32_t rawtemp, int32_t * press_p, int32_t * temp_p);
 
 uint8_t rscs_bmp280_read_status(rscs_bmp280_descriptor_t * bmp);
 

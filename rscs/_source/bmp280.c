@@ -2,8 +2,11 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include <util/delay.h>
+
 #include "../bmp280.h"
 
+#include "../error.h"
 #include "../i2c.h"
 #include "../spi.h"
 
@@ -20,13 +23,13 @@
 	RSCS_BMP280_CSPORT |= (1 << RSCS_BMP280_CSPIN); \
 	rscs_spi_init();\
 	rscs_spi_set_clk(RSCS_BMP280_SPI_FREQ_kHz); \
-	rscs_spi_set_pol(RSCS_SPI_POL_SAMPLE_RISE_SETUP_FALL); \
+	rscs_spi_set_pol(RSCS_SPI_POL_SETUP_FALL_SAMPLE_RISE); \
  	rscs_spi_set_order(RSCS_SPI_ORDER_MSB_FIRST);
 
 //Макрос чтения регистров по SPI
 #define READREGSPI(REG, DATA, COUNT) \
 	RSCS_BMP280_CSPORT &= ~(1 << RSCS_BMP280_CSPIN);\
-	rscs_spi_do( (uint8_t) (REG | (1 << 8)) ); \
+	rscs_spi_do( (uint8_t) (REG | (1 << 7)) ); \
 	for(int i = 0; i < COUNT; i++) { \
 		((uint8_t *)DATA)[i] = rscs_spi_do(0xFF); \
 	} \
@@ -37,7 +40,7 @@
 	RSCS_BMP280_CSPORT &= ~(1 << RSCS_BMP280_CSPIN);\
 	for(int i = 0; i < COUNT; i++) { \
 		printf("BMP280: WRITEREG 1\n"); \
-		rscs_spi_do( ((REG + i) & ~(1 << 8)) ); \
+		rscs_spi_do( ((REG + i) & ~(1 << 7)) ); \
 		printf("BMP280: WRITEREG 2\n"); \
 		rscs_spi_do((((uint8_t *)DATA)[i])); \
 	} \
@@ -83,23 +86,30 @@ void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr){
 
 rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_parameters_t * params){
 	rscs_e error = RSCS_E_NONE;
-	uint8_t tmp[2];
-	tmp[0] = 231;
+	uint8_t tmp[2] = {231, 123};
+
 	for(int i = 0; i < sizeof(descr->calibration_values); i++) {
-		*( ( (uint8_t *) &descr->calibration_values) + i ) = 0;
+		*( ( (uint8_t *) &descr->calibration_values) + i ) = 237;
 	}
 	printf("BMP280: SETUP: trying to IFINIT\n");
 	IFINIT
+
+	_delay_ms(100);
+
 	printf("BMP280: SETUP: trying to read ID reg\n");
 	READREG(RSCS_BMP280_REG_ID, tmp, 1)
-
-	printf("BMP280: returned IDCODE %d\n", tmp[0]);
+	printf("BMP280: returned IDCODE 0x%X\n", tmp[0]);
 	if(tmp[0] != RSCS_BMP280_IDCODE) {
 		return RSCS_E_INVRESP;
 	}
 
-	READREG(RSCS_BMP280_REG_CALVAL_START, &(descr->calibration_values), sizeof(descr->calibration_values))
+	printf("BMP280: SETUP: trying to reset\n");
+	tmp[0] = 0xb6;  // специальное значение, которое сбрасывает датчик
+	WRITEREG(RSCS_BMP280_REG_RESET, tmp, 1);
 
+	_delay_ms(1000);
+
+	READREG(RSCS_BMP280_REG_CALVAL_START, &(descr->calibration_values), sizeof(descr->calibration_values))
 	printf("BMP280: calvals: ");
 	for(int i = 0; i < sizeof(descr->calibration_values); i++) {
 		printf("%d ", *( ( (uint8_t *) &descr->calibration_values) + i ) );
@@ -157,13 +167,16 @@ end:
 	return error;
 }
 
-rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, uint32_t * rawpress, uint32_t * rawtemp){
+rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, int32_t * rawpress, int32_t * rawtemp){
 	rscs_e error = RSCS_E_NONE;
 	uint8_t tmp[6];
 
 	READREG(RSCS_BMP280_REG_PRESS_MSB, tmp, 6)
-	*rawpress = (tmp[0] << 12) | (tmp[1] << 4) | (tmp[2] >> 4);
-	*rawtemp = (tmp[3] << 12) | (tmp[4] << 4) | (tmp[5] >> 4);
+	for(int i = 0; i < sizeof(tmp); i++) {
+		printf("%x\n", tmp[i]);
+	}
+	*rawpress = ((uint32_t)tmp[0] << 12) | ((uint32_t)tmp[1] << 4) | ((uint32_t)tmp[2] >> 4);
+	*rawtemp = ((uint32_t)tmp[3] << 12) | ((uint32_t)tmp[4] << 4) | ((uint32_t)tmp[5] >> 4);
 
 end:
 	printf("BMP280: READ: returning %d\n", error);
@@ -179,6 +192,48 @@ uint8_t rscs_bmp280_read_status(rscs_bmp280_descriptor_t * bmp) {
 end:
 	printf("BMP280: READ: returning %d\n", error);
 	return status;
+}
+
+rscs_e rscs_bmp280_calculate(const rscs_bmp280_calibration_values_t * calvals , int32_t rawpress, int32_t rawtemp, int32_t * press_p, int32_t * temp_p) {
+
+	int32_t t_fine;
+	{
+		int32_t var1, var2;
+		var1 = ((((rawtemp >> 3) - (((int32_t)calvals->T1) << 1))) * ((int32_t)calvals->T2)) >> 11;
+		var2 = (((((rawtemp >> 4) - ((int32_t)calvals->T1)) * ((rawtemp>>4) - ((int32_t)calvals->T1))) >> 12) * ((int32_t)calvals->T3)) >> 14;
+		t_fine = var1 + var2;
+		*temp_p = (t_fine * 5 + 128) >> 8;
+	}
+
+	{
+		int32_t var1_p, var2_p;
+		uint32_t p;
+		var1_p = (((int32_t)t_fine)>>1) - (int32_t)64000;
+		var2_p = (((var1_p>>2) * (var1_p>>2)) >> 11 ) * ((int32_t)calvals->P6);
+		var2_p = var2_p + ((var1_p*((int32_t)calvals->P5))<<1);
+		var2_p = (var2_p>>2)+(((int32_t)calvals->P4)<<16);
+		var1_p = (((calvals->P3 * (((var1_p>>2) * (var1_p>>2)) >> 13 )) >> 3) + ((((int32_t)calvals->P2) * var1_p)>>1))>>18;
+		var1_p =((((32768+var1_p))*((int32_t)calvals->P1))>>15);
+		if (var1_p == 0)
+		{
+		return RSCS_E_NULL; // avoid exception caused by division by zero
+		}
+		p = (((uint32_t)(((int32_t)1048576)- rawpress)-(var2_p>>12)))*3125;
+		if (p < 0x80000000)
+		{
+		p = (p << 1) / ((uint32_t)var1_p);
+		}
+		else
+		{
+		p = (p / (uint32_t)var1_p) * 2;
+		}
+		var1_p = (((int32_t)calvals->P9) * ((int32_t)(((p>>3) * (p>>3))>>13)))>>12;
+		var2_p = (((int32_t)(p>>2)) * ((int32_t)calvals->P8))>>13;
+		p = (uint32_t)((int32_t)p + ((var1_p + var2_p + calvals->P7) >> 4));
+		*press_p = p;
+	}
+
+	return RSCS_E_NONE;
 }
 
 #undef OPERATION
