@@ -28,31 +28,6 @@ inline static bool _ow_get_bus_value(void)
 	return (RSCS_ONEWIRE_REG_PIN & RSCS_ONEWIRE_PIN_MASK) != 0;
 }
 
-// Передача бита по OW шине
-inline static void _ow_write_bit(bool value)
-{
-	_ow_set_bus_zero();
-	_delay_us(2);
-	if (value != 0)
-	{
-		_ow_set_bus_one();
-	}
-
-	_delay_us(60);
-	_ow_set_bus_one();
-}
-
-// чтение бита с OW шины
-inline static bool _ow_read_bit(void)
-{
-	_ow_set_bus_zero();
-	_delay_us (2);
-	_ow_set_bus_one();
-	_delay_us (20);
-	bool x = _ow_get_bus_value();
-	_delay_us(30);
-	return x;
-}
 
 // ========================================================================
 
@@ -83,12 +58,38 @@ bool rscs_ow_reset(void)
 }
 
 
+void rscs_ow_write_bit(bool value)
+{
+	_ow_set_bus_zero();
+	_delay_us(2);
+	if (value != 0)
+	{
+		_ow_set_bus_one();
+	}
+
+	_delay_us(60);
+	_ow_set_bus_one();
+}
+
+
+bool rscs_ow_read_bit(void)
+{
+	_ow_set_bus_zero();
+	_delay_us (2);
+	_ow_set_bus_one();
+	_delay_us (20);
+	bool x = _ow_get_bus_value();
+	_delay_us(30);
+	return x;
+}
+
+
 void rscs_ow_write(uint8_t byte)
 {
 	for (uint8_t i = 0; i < 8; i++)
 	{
 		uint8_t bit = (1<<i) & byte;
-		_ow_write_bit(bit);
+		rscs_ow_write_bit(bit);
 	}
 }
 
@@ -98,7 +99,7 @@ uint8_t rscs_ow_read(void)
 	uint8_t retval = 0;
 	for (uint8_t i = 0; i < 8; i++)
 	{
-		uint8_t bit = _ow_read_bit();
+		uint8_t bit = rscs_ow_read_bit();
 		retval = retval | (bit<<i);
 	}
 	return retval;
