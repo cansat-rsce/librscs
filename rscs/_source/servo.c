@@ -145,7 +145,7 @@ static void _exclude_servo(rscs_servo *tmp)
 
 void rscs_servo_init(int n)
 {
-	DDRC = 0xFF; //ДОПИСАТЬ В КОНФИГ
+	RSCS_SERVO_PORT_DDR = 0xFF; //ДОПИСАТЬ В КОНФИГ
 	head = malloc(sizeof(rscs_servo));
 	_init_servo(0, head);
 	rscs_servo * temp = head;
@@ -170,6 +170,18 @@ void rscs_servo_set_angle(int n, int angle)
 	}
 	if(t == NULL) { return;}
 	t->new_ocr = _map(t, angle);
+}
+
+void _servo_set_ms(int n, int ms)
+{
+	rscs_servo *t = head;
+	while(t != NULL && t->id != n)
+	{
+		t = t->next;
+		//printf("set angle");
+	}
+	if(t == NULL) { return;}
+	t->new_ocr = ms * TEAK_IN_MS;
 }
 
 int _set_angle(rscs_servo *servo)

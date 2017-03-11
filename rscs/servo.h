@@ -4,16 +4,23 @@
 #include <stdint.h>
 
 struct rscs_servo;
-typedef struct rscs_servo rscs_servo; //Структура ещё не тип
+typedef struct rscs_servo rscs_servo;
 
 //Дескриптор сервомашинки
 
 //Инициализация n сервомашинок
 void rscs_servo_init(int n);
 
+//Инициализация таймера, !!!ВАЖНО!!! запускать после инициализации сервомашинок
 void rscs_servo_timer_init(void);
 
 //Установка угла n-ой сервомашинке
 void rscs_servo_set_angle(int n, int angle);
+
+//Установка минимальной и максимальной длинны импульса для n-ой сервомашинки - калибровка
+void rscs_servo_calibrate(int n, float min_ms, float max_ms);
+
+//Функция для калибровки: устанавливает конкретную длину импульса для n-ой сервомашинки
+void _servo_set_ms(int n, int ms);
 
 #endif /* SERVOFUNCTIONS_H_ */
