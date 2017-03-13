@@ -150,10 +150,10 @@ rscs_e rscs_i2c_read(void * data_ptr, size_t data_size, bool NACK_at_end)
 
 	for(int i = 0; i < data_size; i++){
 
-		if(!(i == data_size-1))
-			TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA);
-		else
+		if(NACK_at_end && (i == data_size-1))
 			TWCR = (1<<TWINT) | (1<<TWEN);
+		else
+			TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA);
 
 		bool timeout = true;
 		for(int j = 0; j < RSCS_I2C_TIMEOUT_CYCLES; j++ ) {
