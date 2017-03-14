@@ -1,11 +1,7 @@
 #ifndef BMP280_H_
 #define BMP280_H_
 
-#include "i2c.h"
-
-//Возможные адреса датчика
-#define RSCS_BMP280_ADDR_LOW 0xEC //Когда пин адреса к земле
-#define RSCS_BMP280_ADDR_HIGH 0xEE //Когда пин адреса к 5v
+#include "error.h"
 
 //Адреса регистров устройства
 #define RSCS_BMP280_REG_CALVAL_START 0x88
@@ -23,9 +19,6 @@
 
 //Правильное содержимое регистра ID
 #define RSCS_BMP280_IDCODE 0x58
-
-//Выбор типа с плавающей точкой для обработки измерений
-typedef double rscs_bmp280_fp_t;
 
 //Количество измерений на один результат. Выставляется отдельно для термометра и барометра
 typedef enum {
@@ -76,8 +69,7 @@ typedef struct {
 } rscs_bmp280_calibration_values_t;
 
 /*Параметры датчика. Все поля заполняются пользователем в самой структуре
- *перед вызовом rscs_bmp280_init()
- *Поле mode заполняется rscs_bmp280_changemode()*/
+ *перед вызовом rscs_bmp280_init() */
 typedef struct {
 	// Режим префильтрации измерений давления
 	rscs_bmp280_oversampling_t pressure_oversampling;
@@ -95,7 +87,7 @@ typedef struct rscs_bmp280_descriptor rscs_bmp280_descriptor_t;
 
 // Создание дескриптора датчика
 // Не инициализирует сам датчик.
-rscs_bmp280_descriptor_t * rscs_bmp280_init(i2c_addr_t address);
+rscs_bmp280_descriptor_t * rscs_bmp280_init();
 
 // Освобождение дескритора датчика
 void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr);
@@ -118,16 +110,20 @@ rscs_e rscs_bmp280_set_config(rscs_bmp280_descriptor_t * descr, rscs_bmp280_para
    вызвана rscs_bmp280_deinit для этого дескриптора */
 const rscs_bmp280_calibration_values_t * rscs_bmp280_get_calibration_values(rscs_bmp280_descriptor_t * descr);
 
-//Изменение режима работы. Для начала одиночного измерения преведите в FORCE режим
+//Изменение режима работы. Для начала одиночного измерения переведите в FORCE режим
 rscs_e rscs_bmp280_changemode(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_mode_t mode);
 
 //Чтение данных из BMP(в сыром виде)
 rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, int32_t * rawpress, int32_t * rawtemp);
 
-//Рассчёт давления и температуры из сырых значений.
-//WARNING: на ATMega очень медленно и неточно, лучше считать на земле
+/*Рассчёт давления и температуры из сырых значений.
+ *WARNING: на ATMega очень медленно и неточно, лучше считать на земле
+ *Rawpress и rawtemp - сырые данные, press_p и temp_p - указатели на переменные, куда будут
+ *записаны давление и температура, выраженные в паскалях и сотых долях градуса соответственно.
+ *Может вернуть RSCS_E_NULL, если произошла ошибка деления на ноль*/
 rscs_e rscs_bmp280_calculate(const rscs_bmp280_calibration_values_t * calvals , int32_t rawpress, int32_t rawtemp, int32_t * press_p, int32_t * temp_p);
 
+//Прочитать регистр статуса устройства
 uint8_t rscs_bmp280_read_status(rscs_bmp280_descriptor_t * bmp);
 
 #endif /* BMP280_H_ */

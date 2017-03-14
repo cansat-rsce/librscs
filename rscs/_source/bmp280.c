@@ -12,6 +12,10 @@
 
 #include "librscs_config.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-label" /* Игнорируем ворнинг неиспользуемого лейбла,
+чтобы не было лишних ворнингов на end: при использовании интерфейсов без обработки ошибок*/
+
 //Далее определены макросы для удобного написания кода, все они #undef в конце файла
 
 //Макрос для возможности обработки ошибок
@@ -39,21 +43,21 @@
 #define WRITEREGSPI(REG, DATA, COUNT) \
 	RSCS_BMP280_CSPORT &= ~(1 << RSCS_BMP280_CSPIN);\
 	for(int i = 0; i < COUNT; i++) { \
-		printf("BMP280: WRITEREG 1\n"); \
+		RSCS_DEBUG("BMP280: WRITEREG sending addr\n"); \
 		rscs_spi_do( ((REG + i) & ~(1 << 7)) ); \
-		printf("BMP280: WRITEREG 2\n"); \
+		RSCS_DEBUG("BMP280: WRITEREG sending data\n"); \
 		rscs_spi_do((((uint8_t *)DATA)[i])); \
 	} \
 	RSCS_BMP280_CSPORT |= (1 << RSCS_BMP280_CSPIN);
 
 //Выбор используемых макросов в зависимости от выбранного интерфейса
-#if RSCS_BMP280_IF == SPI
+#if RSCS_BMP280_IF == RSCS_IF_SPI
 
 #define IFINIT INITSPI
 #define READREG(REG, DATA, COUNT) READREGSPI(REG, DATA, COUNT)
 #define WRITEREG(REG, DATA, COUNT) WRITEREGSPI(REG, DATA, COUNT)
 
-#elif RSCS_BMP280_IF == I2C
+#elif RSCS_BMP280_IF == RSCS_IF_I2C
 
 #error "BMP280: не написан обмен по I2C"
 
@@ -66,17 +70,14 @@
 /*Дескриптор датчика.
  *Поле mode заполняется rscs_bmp280_changemode()*/
 struct rscs_bmp280_descriptor {
-	// Адрес датчика на шине - RSCS_BMP280_ADDR_LOW или RSCS_BMP280_ADDR_HIGH
-	i2c_addr_t address;
 	rscs_bmp280_parameters_t parameters;
 	rscs_bmp280_calibration_values_t calibration_values;
 	// Режим работы - непрерывный, одиночный, ожидания
 	rscs_bmp280_mode_t mode;
 };
-//TODO подумать над названием
-rscs_bmp280_descriptor_t * rscs_bmp280_init(i2c_addr_t address){
+
+rscs_bmp280_descriptor_t * rscs_bmp280_init(){
 	rscs_bmp280_descriptor_t * pointer = (rscs_bmp280_descriptor_t *) malloc(sizeof(rscs_bmp280_descriptor_t));
-	pointer->address = address;
 	return pointer;
 }
 
@@ -88,33 +89,38 @@ rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_par
 	rscs_e error = RSCS_E_NONE;
 	uint8_t tmp[2] = {231, 123};
 
+#ifdef RSCS_DEBUGMODE
 	for(int i = 0; i < sizeof(descr->calibration_values); i++) {
 		*( ( (uint8_t *) &descr->calibration_values) + i ) = 237;
 	}
-	printf("BMP280: SETUP: trying to IFINIT\n");
+#endif
+
+	RSCS_DEBUG("BMP280: SETUP: trying to IFINIT\n");
 	IFINIT
 
-	_delay_ms(100);
+	_delay_ms(50);
 
-	printf("BMP280: SETUP: trying to read ID reg\n");
+	RSCS_DEBUG("BMP280: SETUP: trying to read ID reg\n");
 	READREG(RSCS_BMP280_REG_ID, tmp, 1)
-	printf("BMP280: returned IDCODE 0x%X\n", tmp[0]);
+	RSCS_DEBUG("BMP280: returned IDCODE 0x%X\n", tmp[0]);
 	if(tmp[0] != RSCS_BMP280_IDCODE) {
 		return RSCS_E_INVRESP;
 	}
 
-	printf("BMP280: SETUP: trying to reset\n");
+	RSCS_DEBUG("BMP280: SETUP: trying to reset\n");
 	tmp[0] = 0xb6;  // специальное значение, которое сбрасывает датчик
 	WRITEREG(RSCS_BMP280_REG_RESET, tmp, 1);
 
-	_delay_ms(1000);
+	_delay_ms(50);
 
 	READREG(RSCS_BMP280_REG_CALVAL_START, &(descr->calibration_values), sizeof(descr->calibration_values))
-	printf("BMP280: calvals: ");
+#ifdef RSCS_DEBUGMODE
+	RSCS_DEBUG("BMP280: calvals: ");
 	for(int i = 0; i < sizeof(descr->calibration_values); i++) {
-		printf("%d ", *( ( (uint8_t *) &descr->calibration_values) + i ) );
+		RSCS_DEBUG("%d ", *( ( (uint8_t *) &descr->calibration_values) + i ) );
 	}
-	printf("\n");
+	RSCS_DEBUG("\n");
+#endif
 
 	tmp[0] = 	(params->temperature_oversampling << 5) |
 				(params->pressure_oversampling << 2);
@@ -125,7 +131,7 @@ rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_par
 	descr->parameters = *params;
 
 end:
-	printf("BMP280: SETUP: returning %d\n", error);
+	RSCS_DEBUG("BMP280: SETUP: returning %d\n", error);
 	return error;
 }
 
@@ -163,7 +169,7 @@ rscs_e rscs_bmp280_changemode(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_mode_t
 	WRITEREG(RSCS_BMP280_REG_CTRL_MEAS, &tmp, 1)
 
 end:
-	printf("BMP280: CHMODE: returning %d\n", error);
+	RSCS_DEBUG("BMP280: CHMODE: returning %d\n", error);
 	return error;
 }
 
@@ -172,14 +178,11 @@ rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, int32_t * rawpress, int3
 	uint8_t tmp[6];
 
 	READREG(RSCS_BMP280_REG_PRESS_MSB, tmp, 6)
-	for(int i = 0; i < sizeof(tmp); i++) {
-		printf("%x\n", tmp[i]);
-	}
 	*rawpress = ((uint32_t)tmp[0] << 12) | ((uint32_t)tmp[1] << 4) | ((uint32_t)tmp[2] >> 4);
 	*rawtemp = ((uint32_t)tmp[3] << 12) | ((uint32_t)tmp[4] << 4) | ((uint32_t)tmp[5] >> 4);
 
 end:
-	printf("BMP280: READ: returning %d\n", error);
+	RSCS_DEBUG("BMP280: READ: returning %d\n", error);
 	return error;
 }
 
@@ -189,8 +192,9 @@ uint8_t rscs_bmp280_read_status(rscs_bmp280_descriptor_t * bmp) {
 
 	READREG(RSCS_BMP280_REG_STATUS, &status, 1)
 
+
 end:
-	printf("BMP280: READ: returning %d\n", error);
+	RSCS_DEBUG("BMP280: READ: returning %d\n", error);
 	return status;
 }
 
@@ -216,7 +220,7 @@ rscs_e rscs_bmp280_calculate(const rscs_bmp280_calibration_values_t * calvals , 
 		var1_p =((((32768+var1_p))*((int32_t)calvals->P1))>>15);
 		if (var1_p == 0)
 		{
-		return RSCS_E_NULL; // avoid exception caused by division by zero
+		return RSCS_E_NULL; // чтобы не делить на ноль
 		}
 		p = (((uint32_t)(((int32_t)1048576)- rawpress)-(var2_p>>12)))*3125;
 		if (p < 0x80000000)
@@ -237,3 +241,4 @@ rscs_e rscs_bmp280_calculate(const rscs_bmp280_calibration_values_t * calvals , 
 }
 
 #undef OPERATION
+#pragma GCC diagnostic pop
