@@ -90,17 +90,20 @@ void rscs_adc_set_refrence(rscs_adc_ref_t ref);
 	от изменения значений до их применения может пройти некоторое время(см. даташит)*/
 void rscs_adc_set_prescaler(rscs_adc_prescaler_t presc);
 
-#ifdef __AVR_ATmega128__
-//! Установка режима (только ATmega128)
-//  от изменения значений до их применения может пройти некоторое время(см. даташит)
-void rscs_adc_set_mode(rscs_adc_mode_t mode);
-#endif
+//	Одиночное измерение. Вернет RSCS_E_BUSY если, уже есть измерение в процессе.
+rscs_e rscs_adc_start_single_conversion(rscs_adc_channel_t channel);
 
-//! Начало измерения. Вернет RSCS_E_BUSY если, уже есть измерение в процессе.
-rscs_e rscs_adc_start_conversion(rscs_adc_channel_t channel);
+//	Начало непрерывных измерений. Вернет RSCS_E_BUSY если, уже есть измерение в процессе.
+rscs_e rscs_adc_start_continuous_conversion(rscs_adc_channel_t channel);
+
+//	Остановка одиночных измерений
+void rscs_adc_stop_continuous_conversion();
 
 //! Получение результата измерения.
 /*! Если нет свежих данных, вернет RSCS_E_BUSY*/
-rscs_e rscs_adc_get_result(int32_t * value_ptr, rscs_adc_channel_t channel);
+rscs_e rscs_adc_get_result(int32_t * value_ptr);
+
+//Задержка до появления результатов измерения
+void rscs_adc_wait_result();
 
 #endif /* ADC_H_ */
