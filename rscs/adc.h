@@ -97,6 +97,8 @@ rscs_e rscs_adc_start_single_conversion(rscs_adc_channel_t channel);
 rscs_e rscs_adc_start_continuous_conversion(rscs_adc_channel_t channel);
 
 //	Остановка одиночных измерений
+//  После остановки остаётся одно уже запущеное измерение, перед следующей
+//  работой с ацп следует вызвать rscs_adc_wait_result()
 void rscs_adc_stop_continuous_conversion();
 
 //! Получение результата измерения.
