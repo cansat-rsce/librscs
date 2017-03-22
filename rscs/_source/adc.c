@@ -26,9 +26,15 @@ void rscs_adc_init(){
 	}
 }
 
-rscs_e rscs_adc_start_conversion(rscs_adc_channel_t channel){
+rscs_e rscs_adc_start_single_conversion(rscs_adc_channel_t channel){
 
 	if(!(ADCSRA & (1 << ADSC))) {
+
+#ifdef __AVR_ATmega128__
+		ADCSRA &= ~(1 << ADFR);
+#elif defined __AVR_ATmega328P__
+		ADCSRA &= ~(1 << ADATE);
+#endif
 
 		ADMUX &= ~((1 << MUX0) | (1 << MUX1) | (1 << MUX2) | (1 << MUX3));
 
@@ -46,6 +52,40 @@ rscs_e rscs_adc_start_conversion(rscs_adc_channel_t channel){
 	}
 }
 
+rscs_e rscs_adc_start_continuous_conversion(rscs_adc_channel_t channel) {
+
+	if(!(ADCSRA & (1 << ADSC))) {
+
+#ifdef __AVR_ATmega128__
+		ADCSRA |= (1 << ADFR);
+#elif defined __AVR_ATmega328P__
+		ADCSRA |= (1 << ADATE);
+#endif
+
+		ADMUX &= ~((1 << MUX0) | (1 << MUX1) | (1 << MUX2) | (1 << MUX3));
+
+		ADMUX |= channel;
+
+		ADCSRA |= (1 << ADSC);
+
+		_current_channel = channel;
+
+		return RSCS_E_NONE;
+	}
+
+	else {
+		return RSCS_E_BUSY;
+	}
+}
+
+void rscs_adc_stop_continuous_conversion() {
+#ifdef __AVR_ATmega128__
+		ADCSRA &= ~(1 << ADFR);
+#elif defined __AVR_ATmega328P__
+		ADCSRA &= ~(1 << ADATE);
+#endif
+}
+
 void rscs_adc_set_refrence(rscs_adc_ref_t ref){
 	ADMUX &= ~(1 << REFS0) | (1 << REFS1);
 
@@ -58,25 +98,15 @@ void rscs_adc_set_prescaler(rscs_adc_prescaler_t presc){
 	ADCSRA |= presc;
 }
 
-void rscs_adc_set_mode(rscs_adc_mode_t mode){
-#ifdef __AVR_ATmega128__
-	ADCSRA &= ~(1 << ADFR);
-
-	ADCSRA |= (mode << ADFR);
-#elif defined __AVR_ATmega328P__
-	ADCSRA &= ~(1 << ADATE);
-
-	ADCSRA |= (mode << ADATE);
-#endif
-}
-
-rscs_e rscs_adc_get_result(int32_t * value_ptr, rscs_adc_channel_t channel) {
+rscs_e rscs_adc_get_result(int32_t * value_ptr) {
 
 	if(!(ADCSRA & (1 << ADIF))) return RSCS_E_BUSY;
-
-	if(channel != _current_channel) return RSCS_E_INVARG;
 
 	*value_ptr = ADC;
 
 	return RSCS_E_NONE;
+}
+
+void rscs_adc_wait_result() {
+	while(!(ADCSRA & (1 << ADIF))){}
 }
