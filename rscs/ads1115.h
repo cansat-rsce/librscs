@@ -26,13 +26,6 @@ typedef enum {
 
 } rscs_ads1115_channel_t;
 
-//Перечисление режимов измерения
-typedef enum {
-	RSCS_ADS1115_MODE_HALT 			= 0, // Выключен
-	RSCS_ADS1115_MODE_SINGLE 		= 1, // Одно измерение, после чего остановиться
-	RSCS_ADS1115_MODE_CONTINIOUS	= 2, // Переодические измерения
-} rscs_ads1115_mode_t;
-
 //Перечисление частоты измерений
 typedef enum {
 	RSCS_ADS1115_DATARATE_8SPS 		= 0, //Волшебные числа - то, что надо записать в регистр
@@ -77,14 +70,25 @@ rscs_e rscs_ads1115_set_range(rscs_ads1115_t * device, rscs_ads1115_range_t rang
 // Изменение  измерений
 rscs_e rscs_ads1115_set_datarate(rscs_ads1115_t * device, rscs_ads1115_datarate_t datarate);
 
-// Изменение режима измерений
-rscs_e rscs_ads1115_changemode(rscs_ads1115_t * device, rscs_ads1115_mode_t mode);
+// Начало одиночного измерения
+// Выдаст RSCS_E_BUSY, если есть измерение в процессе
+rscs_e rscs_ads1115_start_single(rscs_ads1115_t * device);
 
-// Чтение данных из выбранного в rscs_ads1115_set_channel() канала устройства
+// Начало повторяющихся измерений
+// Выдаст RSCS_E_BUSY, если есть измерение в процессе
+rscs_e rscs_ads1115_start_continuous(rscs_ads1115_t * device);
+
+// Конец повторяющихся измерений
+rscs_e rscs_ads1115_stop_continuous(rscs_ads1115_t * device);
+
+// Чтение данных, полученных после последнего измерения
 /* Параметры:
    - device - дескриптор датчика
    - value - указатель на переменную, в которую следует разместить результат измерения */
 rscs_e rscs_ads1115_read(rscs_ads1115_t * device, uint16_t * value);
+
+// Дождаться окончания измерения
+rscs_e rscs_ads1115_wait_result(rscs_ads1115_t * device);
 
 //TODO в будущем возможна реализация функциональности компаратора
 
