@@ -57,7 +57,7 @@ void rscs_servo_timer_init(void)
 	OCR1A = 20 * TEAK_IN_MS / PRESCALER;
 	OCR1B = current->ocr;
 
-	TCCR1A |= (0<<WGM10) | (0<<WGM11); // CTC, OCR1A
+	TCCR1A |= (0<<WGM10) | (0<<WGM11); 			// CTC, OCR1A
 	TCCR1B |= (1<<WGM12) | (0<<WGM13)
 			| (0<<CS10) | (1<<CS11) | (0<<CS12); //prescaler - 8
 #ifdef __AVR_ATmega328P__
@@ -73,7 +73,7 @@ static inline void _init_servo(int id, rscs_servo * servo)
 	servo->max = TEAK_IN_MS * 2.2 / PRESCALER;
 	servo->id = id;
 	servo->mask = (1 << id);
-	servo->ocr = (servo->min+servo->max)/2;
+	servo->ocr = (servo->max + servo->min) / 2;
 	servo->new_ocr = -1;
 }
 
@@ -162,7 +162,7 @@ void _servo_set_mcs(int n, int mcs)
 		t = t->next;
 	}
 	if(t == NULL) { return;}
-	t->new_ocr = (mcs * TEAK_IN_MS) / 1000.0 ;
+	t->new_ocr = (mcs * TEAK_IN_MS) / (1000.0 * PRESCALER) ;
 }
 
 int _set_angle(rscs_servo *servo)
@@ -184,11 +184,17 @@ int _set_angle(rscs_servo *servo)
 
 ISR(TIMER1_COMPB_vect)
 {
-	do
+	while (1)
 	{
 		RSCS_SERVO_PORT &= ~current->mask;
-		current = current->next;
-	} while (current->next != NULL && current->next->ocr == current->ocr);
+		if (current->next != NULL && current->next->ocr == current->ocr){
+			current = current->next;
+		}
+		else{
+			current = current->next;
+			break;
+		}
+	}
 
 	if(current == NULL)
 	{
@@ -203,9 +209,8 @@ ISR(TIMER1_COMPB_vect)
 		}
 		current = head;
 	}
-
-
 	OCR1B = current->ocr;
+
 }
 
 ISR(TIMER1_COMPA_vect)
