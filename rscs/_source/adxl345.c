@@ -3,10 +3,33 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <util/delay.h>
 
 #include "../i2c.h"
 #include "../spi.h"
 #include "../error.h"
+
+
+//TODO: заготовка для неосновных параметров
+/*typedef struct {
+	int8_t offset_x, offset_y, offset_z; /* Смещение, добавляемое к резульатам
+											измерения (для калибровки, например)
+											(15.6 mg/LSB)* /
+
+
+
+	// Настройки событий TAP и DOUBLE_TAP (подробнее в даташите)
+	uint8_t tap_threshold, 	/* Значение ускорение, при котором сработает
+							 * событие TAP (если включено)
+							 * (62.5 mg/LSB)* /
+	tap_duration, /*Сколько времени ускорение должо быть выше tap_threshold,
+					чтобы вызвать событие TAP (625μs/LSB)* /
+	tap_double_latent, 	/* Время между событием TAP и началом окна, во время
+						   которого можно сгенерировать DOUBLE_TAP (1.25 ms/LSB)* /
+	tap_double_window; /* Продолжительность окна, в которое событие DOUBLE_TAP
+						  может быть сгенерировано (1.25 ms/LSB)* /
+
+} rscs_adxl345_settings_t;*/
 
 
 /* Команды на чтение и запись */
@@ -40,6 +63,7 @@
 #define RSCS_ADXL345_PCTL_MEASURE    (1 << 3)
 #define RSCS_ADXL345_PCTL_SLEEP      (1 << 2)
 #define RSCS_ADXL345_PCTL_WAKEUP(x)  ((x) & 0x3)
+
 /* ADXL345_INT_ENABLE / ADXL345_INT_MAP / ADXL345_INT_SOURCE Определение регистра */
 #define RSCS_ADXL345_DATA_READY      (1 << 7)
 #define RSCS_ADXL345_SINGLE_TAP      (1 << 6)
@@ -49,6 +73,7 @@
 #define RSCS_ADXL345_FREE_FALL       (1 << 2)
 #define RSCS_ADXL345_WATERMARK       (1 << 1)
 #define RSCS_ADXL345_OVERRUN         (1 << 0)
+
 /* ADXL345_DATA_FORMAT Определение регистра */
 #define RSCS_ADXL345_SELF_TEST       (1 << 7)
 #define RSCS_ADXL345_SPI_BIT             (1 << 6)
@@ -56,6 +81,11 @@
 #define RSCS_ADXL345_FULL_RES        (1 << 3)
 #define RSCS_ADXL345_JUSTIFY         (1 << 2)
 #define RSCS_ADXL345_RANGE(x)        ((x) & 0x3)
+
+/* ADXL345_BW_RATE Определение регистра */
+#define RSCS_ADXL345_LOW_POWER       (1 << 4)
+#define RSCS_ADXL345_RATE(x)         ((x) & 0xF)
+
 
 /* ADXL345 Full Resolution Scale Factor */
 #define RSCS_ADXL345_SCALE_FACTOR    		0.0039
@@ -86,20 +116,52 @@ void rscs_adxl345_CS_State(rscs_adxl345_t * device, bool state)
 		*device->CS_PORT &= ~(1 << device->CS_PIN);
 }
 
+#define SSPI_PORT PORTB
+#define SSPI_DDR DDRB
+#define SSPI_PIN PINB
+#define SSPI_MISO (3)
+#define SSPI_MOSI (2)
+#define SSPI_CLK (1)
+#define SSPI_CS (0)
+
+//#define RSCS_SPI_PORTX	(PORTB)
+//#define RSCS_SPI_DDRX	(DDRB)
+//#define RSCS_SPI_MISO	(3)
+//#define RSCS_SPI_MOSI	(2)
+//#define RSCS_SPI_SCK	(1)
+//#define RSCS_SPI_SS		(0)
+
+static uint8_t _spixfer(uint8_t data) {
+  uint8_t reply = 0;
+  for (int i=7; i>=0; i--) {
+    reply <<= 1;
+    SSPI_PORT &= ~(1 << SSPI_CLK);
+    if(data & (1<<i)) SSPI_PORT |= (1 << SSPI_MOSI);
+    else SSPI_PORT &= ~(1 << SSPI_MOSI);
+    _delay_us(10);
+    SSPI_PORT |= (1 << SSPI_CLK);
+    if (SSPI_PIN & (1 << SSPI_MISO))
+      reply |= 1;
+    _delay_us(10);
+  }
+  return reply;
+}
 
 /*ЧТЕНИЕ ЗНАЧЕНИЯ ИЗ РЕГИСТРА*/
 rscs_e rscs_adxl345_getRegisterValue(rscs_adxl345_t * device, uint8_t registerAddress, uint8_t * read_data)
 {
 	rscs_e error = RSCS_E_NONE;
-
 	switch (device->interface) {
 		case RSCS_ADXL345_SPI:
 			registerAddress = RSCS_ADXL345_SPI_READ | registerAddress;	//дописываем в адрес бит чтения
 
 			rscs_adxl345_CS_State(device, 0);
-			rscs_spi_do(0x00);
-			rscs_spi_write(&registerAddress, 1);
-			rscs_spi_read(read_data, 2/*!!!*/, 0xFF);
+			_delay_ms(1);
+			rscs_spi_write(&registerAddress, 1); // FIXME
+			rscs_spi_read(read_data, 1, 0xFF);
+			//_spixfer(registerAddress);
+			//*read_data = _spixfer(0xFF);
+			_delay_ms(1);
 			rscs_adxl345_CS_State(device, 1);
 
 			break;
@@ -132,8 +194,12 @@ rscs_e rscs_adxl345_setRegisterValue(rscs_adxl345_t * device, uint8_t registerAd
 			registerAddress = RSCS_ADXL345_SPI_WRITE | registerAddress;	//дописываем в адрес бит записи
 
 			rscs_adxl345_CS_State(device, 0);
-			rscs_spi_write(&registerAddress, 1);
+			//_delay_ms(1);
+			rscs_spi_write(&registerAddress, 1); // FIXME
 			rscs_spi_write(&registerValue, 1);
+			//_spixfer(registerAddress);
+			//_spixfer(registerValue);
+			//_delay_ms(1);
 			rscs_adxl345_CS_State(device, 1);
 
 			break;
@@ -158,7 +224,8 @@ rscs_e rscs_adxl345_setRegisterValue(rscs_adxl345_t * device, uint8_t registerAd
 rscs_adxl345_t * rscs_adxl345_init(rscs_adxl345_inteface_t interface, rscs_adxl345_addr_t addr,
 		volatile uint8_t * CS_DDR, volatile uint8_t * CS_PORT, uint8_t CS_PIN)
 {
-	// создаем дескриптор
+	//SSPI_DDR |= (1 << SSPI_CS) | (1 << SSPI_CLK) | (1 << SSPI_MOSI);
+ 	// создаем дескриптор
 	rscs_adxl345_t * retval = (rscs_adxl345_t *)malloc(sizeof(rscs_adxl345_t));
 	if (!retval)
 		return retval;
@@ -173,10 +240,16 @@ rscs_adxl345_t * rscs_adxl345_init(rscs_adxl345_inteface_t interface, rscs_adxl3
 	*CS_DDR |= (1 << CS_PIN);		//устанавливаем пин CS на ЗАПИСЬ
 	*retval->CS_PORT |= (1 << retval->CS_PIN);
 
-	//rscs_adxl345_setRegisterValue(retval, ADXL345_OFSX,			0);		//смещение по оси X равно 0 (по умолчанию)
-	//rscs_adxl345_setRegisterValue(retval, ADXL345_OFSY,			0);		//смещение по оси Y равно 0 (по умолчанию)
-	//rscs_adxl345_setRegisterValue(retval, ADXL345_OFSZ,			0);		//смещение по оси Z равно 0 (по умолчанию)
-	//rscs_adxl345_setRegisterValue(retval, ADXL345_BW_RATE,		RSCS_ADXL345_RATE_100HZ);	//LOW_POWER off, 100Гц (по умолчанию)
+	uint8_t devid = 0;
+	while(1){
+		rscs_adxl345_getRegisterValue(retval, 0x00, &devid);
+		printf("%d\n", devid);
+	}
+
+	rscs_adxl345_setRegisterValue(retval, RSCS_ADXL345_OFSX,			0);		//смещение по оси X равно 0 (по умолчанию)
+	rscs_adxl345_setRegisterValue(retval, RSCS_ADXL345_OFSY,			0);		//смещение по оси Y равно 0 (по умолчанию)
+	rscs_adxl345_setRegisterValue(retval, RSCS_ADXL345_OFSZ,			0);		//смещение по оси Z равно 0 (по умолчанию)
+	rscs_adxl345_setRegisterValue(retval, RSCS_ADXL345_BW_RATE,		RSCS_ADXL345_RATE_100HZ);	//LOW_POWER off, 100Гц (по умолчанию)
 	/*rscs_adxl345_setRegisterValue(retval, ADXL345_DATA_FORMAT,	retval->range |				//диапазон 2g (по умолчанию)
 																							//FULL_RES = 0 (разрешение 10 бит для любого диапазона)
 																							//JUSTIFY = 0 (выравнивание бит данных по правому краю)
@@ -186,7 +259,7 @@ rscs_adxl345_t * rscs_adxl345_init(rscs_adxl345_inteface_t interface, rscs_adxl3
 	//rscs_adxl345_setRegisterValue(retval, ADXL345_INT_MAP,		ADXL345_INT_MAP_DA(retval->interface << 6)TA);		//смотри librscs_config.h
 	//rscs_adxl345_setRegisterValue(retval, ADXL345_FIFO_CTL,		ADXL345_FIFO_CTL_DATA);		//смотри librscs_config.h
 
-	//rscs_adxl345_setRegisterValue(retval, ADXL345_POWER_CTL,	ADXL345_PCTL_MEASURE); //переводит акселерометр из режима ожидания в режим измерения
+	rscs_adxl345_setRegisterValue(retval, RSCS_ADXL345_POWER_CTL,	RSCS_ADXL345_PCTL_MEASURE); //переводит акселерометр из режима ожидания в режим измерения
 
 	return retval;
 }
@@ -244,13 +317,9 @@ rscs_e rscs_adxl345_set_offset(rscs_adxl345_t * device, float mg_x, float mg_y, 
 	int8_t ofs_y;
 	int8_t ofs_z;
 
-	if (mg_x < 0) ofs_x = !(round(- mg_x / RSCS_ADXL345_OFFSET_SCALE_FACTOR) - 1);
-	if (mg_y < 0) ofs_y = !(round(- mg_y / RSCS_ADXL345_OFFSET_SCALE_FACTOR) - 1);
-	if (mg_z < 0) ofs_z = !(round(- mg_z / RSCS_ADXL345_OFFSET_SCALE_FACTOR) - 1);
-
-	ofs_x = round(- mg_x / RSCS_ADXL345_OFFSET_SCALE_FACTOR);
-	ofs_y = round(- mg_y / RSCS_ADXL345_OFFSET_SCALE_FACTOR);
-	ofs_z = round(- mg_z / RSCS_ADXL345_OFFSET_SCALE_FACTOR);
+	ofs_x = (int8_t) round(mg_x / RSCS_ADXL345_OFFSET_SCALE_FACTOR);
+	ofs_y = (int8_t) round(mg_y / RSCS_ADXL345_OFFSET_SCALE_FACTOR);
+	ofs_z = (int8_t) round(mg_z / RSCS_ADXL345_OFFSET_SCALE_FACTOR);
 
 	rscs_adxl345_setRegisterValue(device, RSCS_ADXL345_OFSX, ofs_x);
 	rscs_adxl345_setRegisterValue(device, RSCS_ADXL345_OFSX, ofs_y);

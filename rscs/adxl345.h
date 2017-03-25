@@ -9,46 +9,12 @@
 //TODO: написать функцию rscs_adxl345_low_power(bool low_power)
 #define RSCS_ADXL345_BW_RATE_DATA		RSCS_ADXL345_RATE(0b1010) // LOW_POWER - OFF | 1010 - 100Гц
 
-//TODO:Выходить из спящего режима SLEEP = 0 при MEASURE = 0
-#define RSCS_ADXL345_POWER_CTL_DATA		0x00 // LINK - OFF | AUTO_SLEEP - OFF | MEASURE - OFF | SLEEP - OFF | WAKEUP(x) - OFF.
-
-//настройка событий прерывания перенести в librscs_config.h
-#define RSCS_ADXL345_INT_ENABLE_DATA		ADXL345_DATA_READY // DATA_READY - ON, остальные - OFF
-
-//карта вывода прерываний (на INT1 или INT2) перенести в librscs_config.h
-#define RSCS_ADXL345_INT_MAP_DATA		0x00 // 0 - все типы прерываний выведены на пин INT1
-
 //TODO: написать функцию, запускающую self-test
 //TODO: INT_INVERT перенести в librscs_config.h
 #define RSCS_ADXL345_DATA_FORMAT_DATA	RSCS_ADXL345_RANGE_4G // RANGE_4G - диапазон измерений +-4g, остальные параметры по умолчанию
 
 //TODO: FIFO_CTL перенести в librscs_config.h
 #define RSCS_ADXL345_FIFO_CTL_DATA		RSCS_ADXL345_FIFO_STREAM   // Режим FIFO - STREAM, TRIGGER и SAMPLES не имеют значения.
-
-/* ADXL345_BW_RATE Определение регистра */
-#define RSCS_ADXL345_LOW_POWER       (1 << 4)
-#define RSCS_ADXL345_RATE(x)         ((x) & 0xF)
-
-
-
-
-
-
-/* ADXL345_FIFO_CTL Определение регистра */
-#define RSCS_ADXL345_FIFO_MODE(x)    (((x) & 0x3) << 6)
-#define RSCS_ADXL345_TRIGGER         (1 << 5)
-#define RSCS_ADXL345_SAMPLES(x)      ((x) & 0x1F)
-
-/* ADXL345_FIFO_MODE(x) Возможные значения */
-#define RSCS_ADXL345_FIFO_BYPASS     0
-#define RSCS_ADXL345_FIFO_FIFO       1
-#define RSCS_ADXL345_FIFO_STREAM     2
-#define RSCS_ADXL345_FIFO_TRIGGER    3
-
-/* ADXL345_FIFO_STATUS Определение регистра */
-#define RSCS_ADXL345_FIFO_TRIG       (1 << 7)
-#define ADXL345_ENTRIES(x)      ((x) & 0x3F)
-
 
 /*
 	модуль работы с акселерометром ADXL375 через интерфейс I2C
@@ -74,7 +40,7 @@ typedef enum
 	// основной адрес - используется когда ножка ALT ADDRESS подтянута к 1
 	RSCS_ADXL345_ADDR_MAIN = 0x1D,
 	// альтернативный адрес - используется когда ножка ALT ADDRESS подтянута к 0
-	RSCS_ADXL345_ADDR_ALT  = 0x3A,
+	RSCS_ADXL345_ADDR_ALT = 0x3A,
 } rscs_adxl345_addr_t;
 
 
@@ -111,8 +77,6 @@ typedef enum
 } rscs_adxl345_rate_t;
 
 rscs_e rscs_adxl345_getRegisterValue(rscs_adxl345_t * device, uint8_t registerAddress, uint8_t * read_data);
-
-
 
 // Инициализация дескриптора
 /*	Параметры:
