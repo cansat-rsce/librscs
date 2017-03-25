@@ -5,6 +5,7 @@
  *      Author: developer
  */
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "../ina219.h"
 #include "../i2c.h"
@@ -12,6 +13,7 @@
 struct rscs_ina219_t
 {
 	uint8_t address;
+	bool con_rdy;
 };
 
 
@@ -70,7 +72,7 @@ static rscs_e _read_reg(rscs_ina219_t * device, uint8_t reg_addr, uint16_t * reg
 
 	uint8_t data[2];
 
-	error = rscs_i2c_read(data, 2, true);
+	error = rscs_i2c_read(data, 2, 1);
 	if (error != RSCS_E_NONE)
 		goto end;
 
@@ -90,16 +92,12 @@ rscs_ina219_t * rscs_ina219_init(uint8_t i2c_addr)
 		return retval;
 
 	retval->address = i2c_addr;
-
-
 	return retval;
 }
 
 
 void rscs_ina219_deinit(rscs_ina219_t * device)
 {
-
-
 	free(device);
 }
 
@@ -228,6 +226,29 @@ rscs_e rscs_ina219_read(rscs_ina219_t * device, rscs_ina219_channel_t channel, u
 		if (error != RSCS_E_NONE)
 					return error;
 	}break;
+	}
+
+	rscs_i2c_stop();
+	return RSCS_E_NONE;
+}
+
+rscs_e rscs_rscs_ina219_wait_single (rscs_ina219_t * device)
+{
+	rscs_i2c_start();
+
+	rscs_e error;
+	uint16_t con_rdy;
+
+	error = _read_reg (device, 0x02, &con_rdy);
+		if(error != RSCS_E_NONE)
+			return error;
+
+	con_rdy &= 2;
+
+	if(con_rdy == 2){
+		device->con_rdy = true;
+	}else {
+		device->con_rdy = false;
 	}
 
 	rscs_i2c_stop();
