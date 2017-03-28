@@ -117,6 +117,7 @@ enum rscs_enum_ifaces {
 #elif defined __AVR_ATmega128__
 
 #define RSCS_SERVO_PORT (PORTA)
+#define RSCS_SERVO_PORT_DDR (DDRA)
 // TODO: Посмотреть в даташите
 #endif
 
