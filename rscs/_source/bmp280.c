@@ -19,7 +19,7 @@
 //Далее определены макросы для удобного написания кода, все они #undef в конце файла
 
 //Макрос для возможности обработки ошибок
-#define OPERATION(OP) error = OP if(error != RSCS_E_NONE) goto end;
+#define OPERATION(OP) error = OP; if(error != RSCS_E_NONE) goto end;
 
 //Макрос инициализации SPI
 #define INITSPI \
@@ -50,6 +50,28 @@
 	} \
 	RSCS_BMP280_CSPORT |= (1 << RSCS_BMP280_CSPIN);
 
+//Макросы для I2C
+#define INITI2C \
+	/*RSCS_BMP280_CSDDR |= (1 << RSCS_BMP280_CSPIN); \
+	RSCS_BMP280_CSPORT |= (1 << RSCS_BMP280_CSPIN);*/ \
+	rscs_i2c_init();
+
+#define READREGI2C(REG, DATA, COUNT) \
+		OPERATION(rscs_i2c_start()) \
+		OPERATION(rscs_i2c_send_slaw(descr->addr, rscs_i2c_slaw_write)) \
+		OPERATION(rscs_i2c_write_byte(REG)) \
+		OPERATION(rscs_i2c_start()) \
+		OPERATION(rscs_i2c_send_slaw(descr->addr, rscs_i2c_slaw_read)) \
+		OPERATION(rscs_i2c_read(DATA, COUNT, true)) \
+		rscs_i2c_stop();
+
+#define WRITEREGI2C(REG, DATA, COUNT) \
+		OPERATION(rscs_i2c_start()) \
+		OPERATION(rscs_i2c_send_slaw(descr->addr, rscs_i2c_slaw_write)) \
+		OPERATION(rscs_i2c_write_byte(REG)) \
+		OPERATION(rscs_i2c_write(DATA, COUNT)) \
+		rscs_i2c_stop();
+
 //Выбор используемых макросов в зависимости от выбранного интерфейса
 #if RSCS_BMP280_IF == RSCS_IF_SPI
 
@@ -59,7 +81,9 @@
 
 #elif RSCS_BMP280_IF == RSCS_IF_I2C
 
-#error "BMP280: не написан обмен по I2C"
+#define IFINIT INITI2C
+#define READREG(REG, DATA, COUNT) READREGI2C(REG, DATA, COUNT)
+#define WRITEREG(REG, DATA, COUNT) WRITEREGI2C(REG, DATA, COUNT)
 
 #else
 
@@ -74,6 +98,7 @@ struct rscs_bmp280_descriptor {
 	rscs_bmp280_calibration_values_t calibration_values;
 	// Режим работы - непрерывный, одиночный, ожидания
 	rscs_bmp280_mode_t mode;
+	i2c_addr_t addr;
 };
 
 rscs_bmp280_descriptor_t * rscs_bmp280_init(){
@@ -88,6 +113,9 @@ void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr){
 rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_parameters_t * params){
 	rscs_e error = RSCS_E_NONE;
 	uint8_t tmp[2] = {231, 123};
+#if RSCS_BMP280_IF == RSCS_IF_I2C
+	descr->addr = RSCS_BMP280_I2C_ADDR_LOW;
+#endif
 
 #ifdef RSCS_DEBUGMODE
 	for(int i = 0; i < sizeof(descr->calibration_values); i++) {
@@ -160,10 +188,10 @@ const rscs_bmp280_calibration_values_t * rscs_bmp280_get_calibration_values(rscs
 	return &descr->calibration_values;
 }
 
-rscs_e rscs_bmp280_changemode(rscs_bmp280_descriptor_t * bmp, rscs_bmp280_mode_t mode){
+rscs_e rscs_bmp280_changemode(rscs_bmp280_descriptor_t * descr, rscs_bmp280_mode_t mode){
 	rscs_e error = RSCS_E_NONE;
-	uint8_t tmp = (	bmp->parameters.temperature_oversampling << 5) |
-			(bmp->parameters.pressure_oversampling << 2) |
+	uint8_t tmp = (	descr->parameters.temperature_oversampling << 5) |
+			(descr->parameters.pressure_oversampling << 2) |
 			mode;
 
 	WRITEREG(RSCS_BMP280_REG_CTRL_MEAS, &tmp, 1)
@@ -173,7 +201,7 @@ end:
 	return error;
 }
 
-rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * bmp, int32_t * rawpress, int32_t * rawtemp){
+rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * descr, int32_t * rawpress, int32_t * rawtemp){
 	rscs_e error = RSCS_E_NONE;
 	uint8_t tmp[6];
 
@@ -186,7 +214,7 @@ end:
 	return error;
 }
 
-uint8_t rscs_bmp280_read_status(rscs_bmp280_descriptor_t * bmp) {
+uint8_t rscs_bmp280_read_status(rscs_bmp280_descriptor_t * descr) {
 	rscs_e error = RSCS_E_NONE;
 	uint8_t status = 255;
 

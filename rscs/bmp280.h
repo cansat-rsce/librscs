@@ -20,6 +20,10 @@
 //Правильное содержимое регистра ID
 #define RSCS_BMP280_IDCODE 0x58
 
+//Возможные адреса на I2C
+#define RSCS_BMP280_I2C_ADDR_HIGH	0x77
+#define RSCS_BMP280_I2C_ADDR_LOW	0x76
+
 //Количество измерений на один результат. Выставляется отдельно для термометра и барометра
 typedef enum {
 	RSCS_BMP280_OVERSAMPLING_OFF 	= 0,
