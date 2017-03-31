@@ -157,7 +157,7 @@ rscs_e rscs_adxl345_getRegisterValue(rscs_adxl345_t * device, uint8_t registerAd
 
 			rscs_adxl345_CS_State(device, 0);
 			_delay_ms(1);
-			rscs_spi_write(&registerAddress, 1); // FIXME
+			rscs_spi_write(&registerAddress, 1);
 			rscs_spi_read(read_data, 1, 0xFF);
 			//_spixfer(registerAddress);
 			//*read_data = _spixfer(0xFF);
@@ -166,13 +166,20 @@ rscs_e rscs_adxl345_getRegisterValue(rscs_adxl345_t * device, uint8_t registerAd
 
 			break;
 		case RSCS_ADXL345_I2C:
+			printf("ADXL345: getReg: starting\n");
 			GOTO_END_IF_ERROR(rscs_i2c_start());
+			printf("ADXL345: getReg: sending slaw (write)\n");
 			GOTO_END_IF_ERROR(rscs_i2c_send_slaw(device->addr, rscs_i2c_slaw_write));
+			printf("ADXL345: getReg: writing address\n");
 			GOTO_END_IF_ERROR(rscs_i2c_write_byte(registerAddress));
+			printf("ADXL345: getReg: restarting\n");
 			GOTO_END_IF_ERROR(rscs_i2c_start());
+			printf("ADXL345: getReg: sending slaw (read)\n");
 			GOTO_END_IF_ERROR(rscs_i2c_send_slaw(device->addr, rscs_i2c_slaw_read));
+			printf("ADXL345: getReg: reading address\n");
 			GOTO_END_IF_ERROR(rscs_i2c_read(read_data, 1, 1));
 			end:
+			printf("ADXL345: getReg: stopping\n");
 			rscs_i2c_stop();
 			break;
 		default:
@@ -195,7 +202,7 @@ rscs_e rscs_adxl345_setRegisterValue(rscs_adxl345_t * device, uint8_t registerAd
 
 			rscs_adxl345_CS_State(device, 0);
 			//_delay_ms(1);
-			rscs_spi_write(&registerAddress, 1); // FIXME
+			rscs_spi_write(&registerAddress, 1);
 			rscs_spi_write(&registerValue, 1);
 			//_spixfer(registerAddress);
 			//_spixfer(registerValue);
@@ -237,14 +244,15 @@ rscs_adxl345_t * rscs_adxl345_init(rscs_adxl345_inteface_t interface, rscs_adxl3
 	retval->CS_PORT = CS_PORT;
 	retval->CS_PIN = CS_PIN;
 
-	*CS_DDR |= (1 << CS_PIN);		//устанавливаем пин CS на ЗАПИСЬ
-	*retval->CS_PORT |= (1 << retval->CS_PIN);
+	//*CS_DDR |= (1 << CS_PIN);		//устанавливаем пин CS на ЗАПИСЬ
+	//*retval->CS_PORT |= (1 << retval->CS_PIN);
 
-	uint8_t devid = 0;
+	/*uint8_t devid = 0;
+	rscs_e error;
 	while(1){
-		rscs_adxl345_getRegisterValue(retval, 0x00, &devid);
-		printf("%d\n", devid);
-	}
+		error = rscs_adxl345_getRegisterValue(retval, 0x00, &devid);
+		printf("%d, %d\n", devid, error);
+	}*/
 
 	rscs_adxl345_setRegisterValue(retval, RSCS_ADXL345_OFSX,			0);		//смещение по оси X равно 0 (по умолчанию)
 	rscs_adxl345_setRegisterValue(retval, RSCS_ADXL345_OFSY,			0);		//смещение по оси Y равно 0 (по умолчанию)
@@ -361,9 +369,9 @@ rscs_e rscs_adxl345_read(rscs_adxl345_t * device, int16_t * x, int16_t * y, int1
 
 	for (int i = 0; i < sizeof(readBuffer); i++)
 	{
-		printf("[%d] = %d; ", i, readBuffer[i]);
+		//printf("[%d] = %d; ", i, readBuffer[i]);
 	}
-	printf("\n");
+	//("\n");
 
 	*x = (readBuffer[1] << 8) | readBuffer[0];
 	*y = (readBuffer[3] << 8) | readBuffer[2];

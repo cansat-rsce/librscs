@@ -40,7 +40,7 @@ typedef enum
 	// основной адрес - используется когда ножка ALT ADDRESS подтянута к 1
 	RSCS_ADXL345_ADDR_MAIN = 0x1D,
 	// альтернативный адрес - используется когда ножка ALT ADDRESS подтянута к 0
-	RSCS_ADXL345_ADDR_ALT = 0x3A,
+	RSCS_ADXL345_ADDR_ALT = 0x53,
 } rscs_adxl345_addr_t;
 
 
