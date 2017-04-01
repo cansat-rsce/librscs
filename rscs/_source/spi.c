@@ -23,7 +23,7 @@ void rscs_spi_init(void)
 	/*разрешение spi,старший бит вперед,мастер, режим 0*/
 	SPCR = (1 << SPE) | (1 << MSTR);
 
-	rscs_spi_set_clk(100);
+	rscs_spi_set_clk(63);
 }
 
 
