@@ -2,6 +2,7 @@
 #define BMP280_H_
 
 #include "error.h"
+#include "i2c.h"
 
 //Адреса регистров устройства
 #define RSCS_BMP280_REG_CALVAL_START 0x88
@@ -114,7 +115,9 @@ typedef struct rscs_bmp280_descriptor rscs_bmp280_descriptor_t;
 
 // Создание дескриптора датчика
 // Не инициализирует сам датчик.
-rscs_bmp280_descriptor_t * rscs_bmp280_init();
+// Вызывайте только одну ф-ю в зависимости от нужного интерфейса
+rscs_bmp280_descriptor_t * rscs_bmp280_initspi();
+rscs_bmp280_descriptor_t * rscs_bmp280_initi2c(i2c_addr_t addr);
 
 // Освобождение дескритора датчика
 void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr);
