@@ -2,6 +2,7 @@
 #define BMP280_H_
 
 #include "error.h"
+#include "i2c.h"
 
 //Адреса регистров устройства
 #define RSCS_BMP280_REG_CALVAL_START 0x88
@@ -19,6 +20,10 @@
 
 //Правильное содержимое регистра ID
 #define RSCS_BMP280_IDCODE 0x58
+
+//Возможные адреса на I2C
+#define RSCS_BMP280_I2C_ADDR_HIGH	0x77
+#define RSCS_BMP280_I2C_ADDR_LOW	0x76
 
 //Количество измерений на один результат. Выставляется отдельно для термометра и барометра
 typedef enum {
@@ -90,6 +95,8 @@ typedef struct {
  * -------------------------------------------------------------------
  * |  Indoor navigation | Normal |   x16  |   x2   |   16   |  0.5ms |
  * ===================================================================
+ * osrs_t - количество измерений на один результат для температуры.
+ * osrs_p - количество измерений на один результат для давления.
  * */
 typedef struct {
 	// Режим префильтрации измерений давления
@@ -108,7 +115,9 @@ typedef struct rscs_bmp280_descriptor rscs_bmp280_descriptor_t;
 
 // Создание дескриптора датчика
 // Не инициализирует сам датчик.
-rscs_bmp280_descriptor_t * rscs_bmp280_init();
+// Вызывайте только одну ф-ю в зависимости от нужного интерфейса
+rscs_bmp280_descriptor_t * rscs_bmp280_initspi();
+rscs_bmp280_descriptor_t * rscs_bmp280_initi2c(i2c_addr_t addr);
 
 // Освобождение дескритора датчика
 void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr);
