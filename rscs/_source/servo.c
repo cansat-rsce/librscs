@@ -184,17 +184,11 @@ int _set_angle(rscs_servo *servo)
 
 ISR(TIMER1_COMPB_vect)
 {
-	while (1)
+	do
 	{
 		RSCS_SERVO_PORT &= ~current->mask;
-		if (current->next != NULL && current->next->ocr == current->ocr){
-			current = current->next;
-		}
-		else{
-			current = current->next;
-			break;
-		}
-	}
+		current = current->next;
+	}while(current != NULL && current->ocr <= OCR1B);
 
 	if(current == NULL)
 	{
