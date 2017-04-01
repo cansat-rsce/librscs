@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <avr/io.h>	//ВРЕМЕННО
 
+#include "i2c.h"
+
 #include "error.h"
 
 //TODO: написать функцию rscs_adxl345_low_power(bool low_power)
@@ -78,11 +80,12 @@ typedef enum
 
 rscs_e rscs_adxl345_getRegisterValue(rscs_adxl345_t * device, uint8_t registerAddress, uint8_t * read_data);
 
-// Инициализация дескриптора
+// Функции инициализации дескриптора (для разных интерфейсов)
 /*	Параметры:
 	- addr - адрес устройства на шине. Зависит от значения на ножке акселерометра ALT ADDRESS */
-rscs_adxl345_t * rscs_adxl345_init(rscs_adxl345_inteface_t interface, rscs_adxl345_addr_t addr,
-		volatile uint8_t * CS_DDR, volatile uint8_t * CS_PORT, uint8_t CS_PIN);
+rscs_adxl345_t * rscs_adxl345_initi2c(i2c_addr_t addr);
+rscs_adxl345_t * rscs_adxl345_initspi(volatile uint8_t * CS_DDR, volatile uint8_t * CS_PORT,
+										uint8_t CS_PIN);
 
 // освобождение дескриптора
 void rscs_adxl345_deinit(rscs_adxl345_t * device);
@@ -113,7 +116,7 @@ rscs_e rscs_adxl345_read(rscs_adxl345_t * device, int16_t * x, int16_t * y, int1
 void rscs_adxl345_cast_to_G(rscs_adxl345_t * device, int16_t x, int16_t y, int16_t z, float * x_g, float * y_g, float * z_g);
 
 /* ЧТЕНИЕ ДАННЫХ ADXL345 В БИНАРНОМ ВИДЕ И ПРЕОБРАЗОВАНИЕ В ЕДИНИЦЫ g */
-void rscs_adxl345_GetGXYZ(rscs_adxl345_t * device, int16_t* x, int16_t* y, int16_t* z, float* x_g, float* y_g, float* z_g);
+rscs_e rscs_adxl345_GetGXYZ(rscs_adxl345_t * device, int16_t* x, int16_t* y, int16_t* z, float* x_g, float* y_g, float* z_g);
 
 
 #endif /* ADXL345_H_ */
