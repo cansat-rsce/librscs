@@ -114,13 +114,10 @@ enum rscs_enum_ifaces {
 // Настройки зависят от микроконтроллера - это пины, на которые выведены каналы захвата-сравнения таймера 1
 #ifdef __AVR_ATmega328P__
 
-#define RSCS_SERVO_TIM1_A_REG_DDR	(DDRB)
-#define RSCS_SERVO_TIM1_A_PIN_MASK	(1 << 1)
-
-#define RSCS_SERVO_TIM1_B_REG_DDR	(DDRB)
-#define RSCS_SERVO_TIM1_B_PIN_MASK	(1 << 2)
-
 #elif defined __AVR_ATmega128__
+
+#define RSCS_SERVO_PORT (PORTA)
+#define RSCS_SERVO_PORT_DDR (DDRA)
 // TODO: Посмотреть в даташите
 #endif
 
@@ -151,6 +148,16 @@ enum rscs_enum_ifaces {
 #define RSCS_BMP280_SPI_FREQ_kHz 64
 
 #endif //RSCS_BMP280_IF == SPI
+
+
+
+// ========================================================
+// Настройки модуля BMP280
+// ========================================================
+// Настройка пина CS
+#define ADXL345_CS_DDR			DDRB	// регистр DDR порта, на котором расположен CS пин
+#define ADXL345_CS_PORT			PORTB	// регистр PORT порта, на котором расположен CS пин
+#define ADXL345_CS_PIN			4		// номер пина CS в порту
 
 
 
