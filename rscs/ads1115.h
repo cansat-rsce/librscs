@@ -85,7 +85,7 @@ rscs_e rscs_ads1115_stop_continuous(rscs_ads1115_t * device);
 /* Параметры:
    - device - дескриптор датчика
    - value - указатель на переменную, в которую следует разместить результат измерения */
-rscs_e rscs_ads1115_read(rscs_ads1115_t * device, uint16_t * value);
+rscs_e rscs_ads1115_read(rscs_ads1115_t * device, int16_t * value);
 
 // Дождаться окончания измерения
 rscs_e rscs_ads1115_wait_result(rscs_ads1115_t * device);
