@@ -49,10 +49,10 @@ typedef enum {
 } rscs_ads1115_range_t;
 
 //Возможные адреса ацп на шине (в зависимости от подключения ADDR пина)
-#define RSCS_ADS1115_ADDR_GND 0x90 //ADDR подключен к GND
-#define RSCS_ADS1115_ADDR_VCC 0x91 //ADDR подключен к VCC
-#define RSCS_ADS1115_ADDR_SDA 0x92 //ADDR подключен к SDA
-#define RSCS_ADS1115_ADDR_SCL 0x93 //ADDR подключен к SCL
+#define RSCS_ADS1115_ADDR_GND 0x48 //ADDR подключен к GND
+#define RSCS_ADS1115_ADDR_VCC 0x49 //ADDR подключен к VCC
+#define RSCS_ADS1115_ADDR_SDA 0x50 //ADDR подключен к SDA
+#define RSCS_ADS1115_ADDR_SCL 0x51 //ADDR подключен к SCL
 
 // Инициализация датчика.
 /* Аргумент - семибитный адрес устройства на I2C шине, который задается перемычками */

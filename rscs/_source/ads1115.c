@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "../i2c.h"
 
@@ -19,15 +20,16 @@
 	OPERATION(rscs_i2c_send_slaw(ADDR, rscs_i2c_slaw_write)) \
 	OPERATION(rscs_i2c_write_byte(REG)) \
 	rscs_i2c_start();\
-	OPERATION(rscs_i2c_send_slaw(ADDR, rscs_i2c_slaw_write)) \
-	OPERATION(rscs_i2c_read(DATA, COUNT, true);) \
+	OPERATION(rscs_i2c_send_slaw(ADDR, rscs_i2c_slaw_read)) \
+	/*printf("ADS1115: READREG: read\n");*/ \
+	OPERATION(rscs_i2c_read(DATA, COUNT, true)) \
 	rscs_i2c_stop();
 
 #define RSCS_I2C_WRITEREG(ADDR, REG, DATA, COUNT) \
 	rscs_i2c_start();\
 	OPERATION(rscs_i2c_send_slaw(ADDR, rscs_i2c_slaw_write)) \
 	OPERATION(rscs_i2c_write_byte(REG)) \
-	OPERATION(rscs_i2c_write(DATA, COUNT);) \
+	OPERATION(rscs_i2c_write(DATA, COUNT)) \
 	rscs_i2c_stop();
 
 
@@ -68,11 +70,12 @@ rscs_e rscs_ads1115_set_range(rscs_ads1115_t * device, rscs_ads1115_range_t rang
 
 	uint16_t config = 0;
 
+	printf("ADS1115: set_range: READREG\n");
 	RSCS_I2C_READREG(device->address, RSCS_ADS1115_REG_CONFIG, &config, sizeof(config))
 
 	config &= ~((1 << 11) | (1 << 10) | (1 << 9));
 	config |= (range << 9);
-
+	printf("ADS1115: set_range: WRITEREG\n");
 	RSCS_I2C_WRITEREG(device->address, RSCS_ADS1115_REG_CONFIG, &config, sizeof(config))
 
 end:
@@ -127,10 +130,11 @@ rscs_e rscs_ads1115_start_continuous(rscs_ads1115_t * device) {
 
 	RSCS_I2C_READREG(device->address, RSCS_ADS1115_REG_CONFIG, &config, sizeof(config))
 
-	if(!(config & (1 << 15))){
+	/*bool n_busy = (config & (1 << 15)) == (1 << 15);
+	if(!n_busy){
 		error = RSCS_E_BUSY;
 		goto end;
-	}
+	}*/
 
 	config &= ~(1 << 8);
 
