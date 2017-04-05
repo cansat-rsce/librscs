@@ -96,7 +96,7 @@ struct rscs_bmp280_descriptor {
 	rscs_bmp280_calibration_values_t calibration_values;
 	// Режим работы - непрерывный, одиночный, ожидания
 	rscs_bmp280_mode_t mode;
-	i2c_addr_t addr;
+	rscs_bmp280_addr_t addr;
 };
 
 rscs_bmp280_descriptor_t * rscs_bmp280_initspi(){
@@ -104,7 +104,7 @@ rscs_bmp280_descriptor_t * rscs_bmp280_initspi(){
 	return pointer;
 }
 
-rscs_bmp280_descriptor_t * rscs_bmp280_initi2c(i2c_addr_t addr){
+rscs_bmp280_descriptor_t * rscs_bmp280_initi2c(rscs_bmp280_addr_t addr){
 	rscs_bmp280_descriptor_t * pointer = (rscs_bmp280_descriptor_t *) malloc(sizeof(rscs_bmp280_descriptor_t));
 	pointer->addr = addr;
 	return pointer;
