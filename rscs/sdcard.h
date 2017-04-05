@@ -57,7 +57,7 @@ void rscs_sd_spi_setup_slow(void);
 	cs_port_reg - Указатель на PORT регистр порта на котором расположен chip select пин SD карты (например - &PORTB).
 	cs_pin_mask - 8-ми битная маска, задающая пин chip select SD карты (Например 1 << 2).
  */
-rscs_sdcard_t * rscs_sd_init(uint8_t * cs_ddr_reg, uint8_t * cs_port_reg, uint8_t cs_pin_mask);
+rscs_sdcard_t * rscs_sd_init(volatile uint8_t * cs_ddr_reg,volatile uint8_t * cs_port_reg, uint8_t cs_pin_mask);
 
 // Деинициализация SD карты и особождение всех исользуемых модулем для этой карты ресурсов.
 void rscs_sd_deinit(rscs_sdcard_t * self);

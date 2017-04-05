@@ -40,7 +40,7 @@ struct rscs_sdcard
 
 // =================================================================
 
-rscs_sdcard_t * rscs_sd_init(uint8_t * cs_ddr_reg, uint8_t * cs_port_reg, uint8_t cs_pin_mask)
+rscs_sdcard_t * rscs_sd_init(volatile uint8_t * cs_ddr_reg,volatile uint8_t * cs_port_reg, uint8_t cs_pin_mask)
 {
 	rscs_sdcard_t * self = (rscs_sdcard_t*)malloc(sizeof(rscs_sdcard_t));
 	if (NULL == self)
