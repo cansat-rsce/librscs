@@ -42,7 +42,7 @@ typedef enum {
 typedef enum {
 	RSCS_ADS1115_RANGE_6DOT144 	= 0, //Волшебные числа - то, что надо записать в регистр
 	RSCS_ADS1115_RANGE_4DOT096 	= 1,
-	RSCS_ADS1115_RANGE_2DOT048 	= 2,//TODO
+	RSCS_ADS1115_RANGE_2DOT048 	= 2,
 	RSCS_ADS1115_RANGE_1DOT024 	= 3,
 	RSCS_ADS1115_RANGE_0DOT512 	= 4,
 	RSCS_ADS1115_RANGE_0DOT256 	= 5,
@@ -88,6 +88,7 @@ rscs_e rscs_ads1115_stop_continuous(rscs_ads1115_t * device);
 rscs_e rscs_ads1115_read(rscs_ads1115_t * device, int16_t * value);
 
 // Дождаться окончания измерения
+// (имеет смысл только в одиночном режиме, в режиме множества измеерний сразу закончит ждать)
 rscs_e rscs_ads1115_wait_result(rscs_ads1115_t * device);
 
 //TODO в будущем возможна реализация функциональности компаратора

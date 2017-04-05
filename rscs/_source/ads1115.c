@@ -23,7 +23,6 @@
 	OPERATION(rscs_i2c_write_byte(REG)) \
 	rscs_i2c_start();\
 	OPERATION(rscs_i2c_send_slaw(ADDR, rscs_i2c_slaw_read)) \
-	/*printf("ADS1115: READREG: read\n");*/ \
 	OPERATION(rscs_i2c_read(DATA, 2, true))\
 	CHBYTEORDER(*DATA)\
 	rscs_i2c_stop();
@@ -60,7 +59,6 @@ rscs_e rscs_ads1115_set_channel(rscs_ads1115_t * device, rscs_ads1115_channel_t 
 
 	ADS_I2C_READREG(device->address, RSCS_ADS1115_REG_CONFIG, &config)
 
-	CHBYTEORDER(config);
 
 	config &= ~((1 << 14) | (1 << 13) | (1 << 12));
 	config |= (channel << 12);
@@ -77,12 +75,10 @@ rscs_e rscs_ads1115_set_range(rscs_ads1115_t * device, rscs_ads1115_range_t rang
 
 	uint16_t config = 0;
 
-	printf("ADS1115: set_range: READREG\n");
 	ADS_I2C_READREG(device->address, RSCS_ADS1115_REG_CONFIG, &config)
 
 	config &= ~((1 << 11) | (1 << 10) | (1 << 9));
 	config |= (range << 9);
-	printf("ADS1115: set_range: WRITEREG\n");
 	ADS_I2C_WRITEREG(device->address, RSCS_ADS1115_REG_CONFIG, &config)
 
 end:
@@ -185,6 +181,7 @@ rscs_e rscs_ads1115_wait_result(rscs_ads1115_t * device) {
 	while(1) {
 		ADS_I2C_READREG(device->address, RSCS_ADS1115_REG_CONFIG, &config)
 		if((config & (1 << 15))) break;
+		if(!(config & (1 << 8))) break;
 	}
 
 end:
