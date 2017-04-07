@@ -36,7 +36,7 @@ rscs_e rscs_ina219_read(rscs_ina219_t * device, rscs_ina219_channel_t channel, u
 
 rscs_e rscs_ina219_wait_single (rscs_ina219_t * device);
 
-rscs_e rscs_ina216_config
+rscs_e rscs_ina216_set_cal(rscs_ina219_t * device, uint8_t maxExpCur, uint8_t Rshunt);
 
 
 

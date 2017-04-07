@@ -6,14 +6,15 @@
  */
 #include <stdlib.h>
 #include <stdbool.h>
+#include <util/delay.h>
 
+#include  "librscs_config.h"
 #include "../ina219.h"
 #include "../i2c.h"
 
 struct rscs_ina219_t
 {
 	uint8_t address;
-	bool con_rdy;
 };
 
 
@@ -148,8 +149,6 @@ rscs_e rscs_ina219_start_single(rscs_ina219_t * device, rscs_ina219_channel_t mo
 
 rscs_e rscs_ina219_start_continuous(rscs_ina219_t * device, rscs_ina219_channel_t mode)
 {
-	rscs_i2c_start();
-
 	rscs_e error;
 
 		switch (mode)
@@ -192,7 +191,6 @@ rscs_e rscs_ina219_start_continuous(rscs_ina219_t * device, rscs_ina219_channel_
 		}break;
 		}
 
-		rscs_i2c_stop();
 		return RSCS_E_NONE;
 
 }
@@ -200,8 +198,6 @@ rscs_e rscs_ina219_start_continuous(rscs_ina219_t * device, rscs_ina219_channel_
 
 rscs_e rscs_ina219_read(rscs_ina219_t * device, rscs_ina219_channel_t channel, uint16_t * rawvalue)
 {
-	rscs_i2c_start();
-
 	rscs_e error;
 
 	switch(channel)
@@ -215,44 +211,52 @@ rscs_e rscs_ina219_read(rscs_ina219_t * device, rscs_ina219_channel_t channel, u
 
 	case RSCS_INA219_CHANNEL_BUS:
 	{
-		_read_reg(device, 0x02, rawvalue);
+		error = _read_reg(device, 0x02, rawvalue);
 		if (error != RSCS_E_NONE)
 					return error;
 	}break;
 
 	case RSCS_INA219_CHANNEL_POWER:
 	{
-		_read_reg(device, 0x03, rawvalue);
+		error = _read_reg(device, 0x03, rawvalue);
 		if (error != RSCS_E_NONE)
 					return error;
 	}break;
 	}
 
-	rscs_i2c_stop();
 	return RSCS_E_NONE;
 }
 
 rscs_e rscs_rscs_ina219_wait_single (rscs_ina219_t * device)
 {
-	rscs_i2c_start();
-
 	rscs_e error;
 	uint16_t con_rdy;
 
-	error = _read_reg (device, 0x02, &con_rdy);
+	for (int i = 0; i < RSCS_INA219_TIMEOUT_CYCLES; i++)
+	{
+		error = _read_reg(device, 0x02, &con_rdy);
 		if(error != RSCS_E_NONE)
 			return error;
 
-	con_rdy &= 2;
+		if ((con_rdy &= 2) == 2)
+			return RSCS_E_NONE;
 
-	if(con_rdy == 2){
-		device->con_rdy = true;
-	}else {
-		device->con_rdy = false;
+		_delay_us(100);
 	}
-
-	rscs_i2c_stop();
-	return RSCS_E_NONE;
+	return RSCS_E_TIMEOUT;
 }
 
+rscs_e rscs_ina216_set_cal(rscs_ina219_t * device, uint8_t maxExpCur, uint8_t Rshunt)
+{
+	rscs_e error;
+	uint32_t calVal;
+
+	calVal = (0.04096 * (1L<<15) * 1000)/(maxExpCur * Rshunt);
+
+	error = _write_reg(device, 0x05, calVal);
+	if(error != RSCS_E_NONE)
+		return error;
+
+	return RSCS_E_NONE;
+}
 
