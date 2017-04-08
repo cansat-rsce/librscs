@@ -8,6 +8,8 @@
 #include <stdbool.h>
 #include <util/delay.h>
 
+#include <stdio.h>
+
 #include  "librscs_config.h"
 #include "../ina219.h"
 #include "../i2c.h"
@@ -25,6 +27,8 @@ static rscs_e _write_reg(rscs_ina219_t * device, uint8_t reg_addr, uint16_t reg_
 	error = rscs_i2c_start();
 	if (error != RSCS_E_NONE)
 		return error;
+
+	printf("start sent\n");
 
 	error = rscs_i2c_send_slaw(device->address, rscs_i2c_slaw_write);
 	if (error != RSCS_E_NONE)
@@ -246,7 +250,7 @@ rscs_e rscs_rscs_ina219_wait_single (rscs_ina219_t * device)
 	return RSCS_E_TIMEOUT;
 }
 
-rscs_e rscs_ina216_set_cal(rscs_ina219_t * device, uint8_t maxExpCur, uint8_t Rshunt)
+rscs_e rscs_ina219_set_cal(rscs_ina219_t * device, uint8_t maxExpCur, uint8_t Rshunt)
 {
 	rscs_e error;
 	uint32_t calVal;
