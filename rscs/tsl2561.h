@@ -15,6 +15,9 @@
 rscs_e rscs_tsl2561_init(void);
 
 // Получение данных с tsl2561
-uint16_t rscs_tsl2561_read(s);
+rscs_e rscs_tsl2561_read(uint16_t * sensor_data0, uint16_t * sensor_data1);
+
+// Формирует полноценные люксы из отдельных показаний фотодиодов
+uint16_t get_lux(unsigned int iGain, unsigned int tInt, unsigned int sensor_data0, unsigned int sensor_data1, int iType);
 
 #endif /* TSL2561_H_ */
