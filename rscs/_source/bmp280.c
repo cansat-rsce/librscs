@@ -117,18 +117,12 @@ void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr){
 rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_parameters_t * params){
 	rscs_e error = RSCS_E_NONE;
 	uint8_t tmp[2] = {231, 123};
-#if RSCS_BMP280_IF == RSCS_IF_I2C
-	descr->addr = RSCS_BMP280_I2C_ADDR_LOW;
-#endif
 
 #ifdef RSCS_DEBUGMODE
 	for(int i = 0; i < sizeof(descr->calibration_values); i++) {
 		*( ( (uint8_t *) &descr->calibration_values) + i ) = 237;
 	}
 #endif
-
-	RSCS_DEBUG("BMP280: SETUP: trying to IFINIT\n");
-	IFINIT
 
 	_delay_ms(50);
 
