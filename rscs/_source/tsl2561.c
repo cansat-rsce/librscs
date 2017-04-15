@@ -146,13 +146,13 @@ rscs_e rscs_tsl2561_read(uint16_t * sensor_data0, uint16_t * sensor_data1)
 {
     error = rscs_i2c_start();
     if (error != RSCS_E_NONE)
-    	return error;
+        return error;
 
     GOTO_END_IF_ERROR(rscs_i2c_send_slaw(tsl2561_addr1, rscs_i2c_slaw_write));
     GOTO_END_IF_ERROR(rscs_i2c_write_byte(0x80 | 0x20 | 0x0E));
     GOTO_END_IF_ERROR(rscs_i2c_start()); // создали restart
     GOTO_END_IF_ERROR(rscs_i2c_send_slaw(tsl2561_addr1, rscs_i2c_slaw_read));
-    GOTO_END_IF_ERROR(rscs_i2c_read(sensor_data0, 2, true));
+    GOTO_END_IF_ERROR(rscs_i2c_read(sensor_data1, 2, true));
     rscs_i2c_stop();
 
     error = rscs_i2c_start();
@@ -162,14 +162,14 @@ rscs_e rscs_tsl2561_read(uint16_t * sensor_data0, uint16_t * sensor_data1)
     GOTO_END_IF_ERROR(rscs_i2c_write_byte(0x80 | 0x20 | 0x0C));
     GOTO_END_IF_ERROR(rscs_i2c_start()); // создали restart
     GOTO_END_IF_ERROR(rscs_i2c_send_slaw(tsl2561_addr1, rscs_i2c_slaw_read));
-    GOTO_END_IF_ERROR(rscs_i2c_read(sensor_data1, 2, true));
+    GOTO_END_IF_ERROR(rscs_i2c_read(sensor_data0, 2, true));
 
 end:
     rscs_i2c_stop();
     return error;
 }
 
-unsigned int get_lux(unsigned int iGain, unsigned int tInt, unsigned int ch0, unsigned int ch1, int iType)
+unsigned int rscs_tsl2561_get_lux(unsigned int iGain, unsigned int tInt, unsigned int ch0, unsigned int ch1, int iType)
 	{
 
 	// iGain - масштаб (0 : 1X, 1 : 16X)
