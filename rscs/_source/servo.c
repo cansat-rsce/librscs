@@ -29,6 +29,7 @@ struct rscs_servo{
 
 rscs_servo * head;
 rscs_servo * current;
+uint8_t PORT_UP = 0;
 
 int _map(rscs_servo *t,int an)
 {
@@ -141,6 +142,10 @@ void rscs_servo_init(int n)
 	}
 	current = head;
 	temp->next = NULL;
+	for(int i = 0; i < n; i++)
+	{
+		PORT_UP = (PORT_UP << 1) + 1;
+	}
 }
 
 void rscs_servo_set_angle(int n, int angle)
@@ -209,5 +214,5 @@ ISR(TIMER1_COMPB_vect)
 
 ISR(TIMER1_COMPA_vect)
 {
-	RSCS_SERVO_PORT = 0xFF;
+	RSCS_SERVO_PORT |= PORT_UP;
 }

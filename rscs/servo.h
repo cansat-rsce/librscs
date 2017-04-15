@@ -3,11 +3,6 @@
 
 #include <stdint.h>
 
-struct rscs_servo;
-typedef struct rscs_servo rscs_servo;
-
-//Дескриптор сервомашинки
-
 //Инициализация n сервомашинок
 void rscs_servo_init(int n);
 
