@@ -11,10 +11,18 @@
 #include <stdint.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "../i2c.h"
 
-uint8_t tsl2561_addr1 = 0b00111001; // пин ADDR SEL летает
+
+struct rscs_tsl2561_t
+{
+	uint8_t i2c_addr; // адрес устройства, с которым мы связываемся
+	unsigned int iGain; // iGain - масштаб (0 : 1X, 1 : 16X)
+	int iType; // iType - тип корпуса (0 : T, 1 : CS)
+};
+
 int tsl2561_ACK = 0;
 int tsl2561_NACK = 1;
 
@@ -25,75 +33,75 @@ int tsl2561_NACK = 1;
 #define TIMING_REG_ADDR 0x01
 #define INTERRUPT_REG_ADDR 0x06
 #define DATA0LOW_REG_ADDR 0x0C
-#define DATA0HIGH_REG_ADDR 0x0D
+#define DATA0HIGH_REG_ADDR 0x0Drscs_e error = rscs_tsl2561_setup(s1);
 #define DATA1LOW_REG_ADDR 0x0E
 #define DATA1HIGH_REG_ADDR 0x0F
 
 #define K1C  0x0043 // 0.130 * 2^RATIO_SCALE
-	#define B1C  0x0204 // 0.0315 * 2^LUX_SCALE
-	#define M1C  0x01ad // 0.0262 * 2^LUX_SCALE
-	#define K2C  0x0085 // 0.260 * 2^RATIO_SCALE
-	#define B2C  0x0228 // 0.0337 * 2^LUX_SCALE
-	#define M2C  0x02c1 // 0.0430 * 2^LUX_SCALE
-	#define K3C  0x00c8 // 0.390 * 2^RATIO_SCALE
-	#define B3C  0x0253 // 0.0363 * 2^LUX_SCALE
-	#define M3C  0x0363 // 0.0529 * 2^LUX_SCALE
-	#define K4C  0x010a // 0.520 * 2^RATIO_SCALE
-	#define B4C  0x0282 // 0.0392 * 2^LUX_SCALE
-	#define M4C  0x03df // 0.0605 * 2^LUX_SCALE
-	#define K5C  0x014d // 0.65 * 2^RATIO_SCALE
-	#define B5C  0x0177 // 0.0229 * 2^LUX_SCALE
-	#define M5C  0x01dd // 0.0291 * 2^LUX_SCALE
-	#define K6C  0x019a // 0.80 * 2^RATIO_SCALE
-	#define B6C  0x0101 // 0.0157 * 2^LUX_SCALE
-	#define M6C  0x0127 // 0.0180 * 2^LUX_SCALE
-	#define K7C  0x029a // 1.3 * 2^RATIO_SCALE
-	#define B7C  0x0037 // 0.00338 * 2^LUX_SCALE
-	#define M7C  0x002b // 0.00260 * 2^LUX_SCALE
-	#define K8C  0x029a // 1.3 * 2^RATIO_SCALE
-	#define B8C  0x0000 // 0.000 * 2^LUX_SCALE
-	#define M8C  0x0000 // 0.000 * 2^LUX_SCALE
-	#define K1T  0x0040 // 0.125 * 2^RATIO_SCALE
-	#define B1T  0x01f2 // 0.0304 * 2^LUX_SCALE
-	#define M1T  0x01be // 0.0272 * 2^LUX_SCALE
-	#define K2T  0x0080 // 0.250 * 2^RATIO_SCALE
-	#define B2T  0x0214 // 0.0325 * 2^LUX_SCALE
-	#define M2T  0x02d1 // 0.0440 * 2^LUX_SCALE
-	#define K3T  0x00c0 // 0.375 * 2^RATIO_SCALE
-	#define B3T  0x023f // 0.0351 * 2^LUX_SCALE
-	#define M3T  0x037b // 0.0544 * 2^LUX_SCALE
-	#define K4T  0x0100 // 0.50 * 2^RATIO_SCALE
-	#define B4T  0x0270 // 0.0381 * 2^LUX_SCALE
-	#define M4T  0x03fe // 0.0624 * 2^LUX_SCALE
-	#define K5T  0x0138 // 0.61 * 2^RATIO_SCALE
-	#define B5T  0x016f // 0.0224 * 2^LUX_SCALE
-	#define M5T  0x01fc // 0.0310 * 2^LUX_SCALE
-	#define K6T  0x019a // 0.80 * 2^RATIO_SCALE
-	#define B6T  0x00d2 // 0.0128 * 2^LUX_SCALE
-	#define M6T  0x00fb // 0.0153 * 2^LUX_SCALE
-	#define K7T  0x029a // 1.3 * 2^RATIO_SCALE
-	#define B7T  0x0018 // 0.00146 * 2^LUX_SCALE
-	#define M7T  0x0012 // 0.00112 * 2^LUX_SCALE
-	#define K8T  0x029a // 1.3 * 2^RATIO_SCALE
-	#define B8T  0x0000 // 0.000 * 2^LUX_SCALE
-	#define M8T  0x0000 // 0.000 * 2^LUX_SCALE
+#define B1C  0x0204 // 0.0315 * 2^LUX_SCALE
+#define M1C  0x01ad // 0.0262 * 2^LUX_SCALE
+#define K2C  0x0085 // 0.260 * 2^RATIO_SCALE
+#define B2C  0x0228 // 0.0337 * 2^LUX_SCALE
+#define M2C  0x02c1 // 0.0430 * 2^LUX_SCALE
+#define K3C  0x00c8 // 0.390 * 2^RATIO_SCALE
+#define B3C  0x0253 // 0.0363 * 2^LUX_SCALE
+#define M3C  0x0363 // 0.0529 * 2^LUX_SCALE
+#define K4C  0x010a // 0.520 * 2^RATIO_SCALE
+#define B4C  0x0282 // 0.0392 * 2^LUX_SCALE
+#define M4C  0x03df // 0.0605 * 2^LUX_SCALE
+#define K5C  0x014d // 0.65 * 2^RATIO_SCALE
+#define B5C  0x0177 // 0.0229 * 2^LUX_SCALE
+#define M5C  0x01dd // 0.0291 * 2^LUX_SCALE
+#define K6C  0x019a // 0.80 * 2^RATIO_SCALE
+#define B6C  0x0101 // 0.0157 * 2^LUX_SCALE
+#define M6C  0x0127 // 0.0180 * 2^LUX_SCALE
+#define K7C  0x029a // 1.3 * 2^RATIO_SCALE
+#define B7C  0x0037 // 0.00338 * 2^LUX_SCALE
+#define M7C  0x002b // 0.00260 * 2^LUX_SCALE
+#define K8C  0x029a // 1.3 * 2^RATIO_SCALE
+#define B8C  0x0000 // 0.000 * 2^LUX_SCALE
+#define M8C  0x0000 // 0.000 * 2^LUX_SCALE
+#define K1T  0x0040 // 0.125 * 2^RATIO_SCALE
+#define B1T  0x01f2 // 0.0304 * 2^LUX_SCALE
+#define M1T  0x01be // 0.0272 * 2^LUX_SCALE
+#define K2T  0x0080 // 0.250 * 2^RATIO_SCALE
+#define B2T  0x0214 // 0.0325 * 2^LUX_SCALE
+#define M2T  0x02d1 // 0.0440 * 2^LUX_SCALE
+#define K3T  0x00c0 // 0.375 * 2^RATIO_SCALE
+#define B3T  0x023f // 0.0351 * 2^LUX_SCALE
+#define M3T  0x037b // 0.0544 * 2^LUX_SCALE
+#define K4T  0x0100 // 0.50 * 2^RATIO_SCALE
+#define B4T  0x0270 // 0.0381 * 2^LUX_SCALE
+#define M4T  0x03fe // 0.0624 * 2^LUX_SCALE
+#define K5T  0x0138 // 0.61 * 2^RATIO_SCALE
+#define B5T  0x016f // 0.0224 * 2^LUX_SCALE
+#define M5T  0x01fc // 0.0310 * 2^LUX_SCALE
+#define K6T  0x019a // 0.80 * 2^RATIO_SCALE
+#define B6T  0x00d2 // 0.0128 * 2^LUX_SCALE
+#define M6T  0x00fb // 0.0153 * 2^LUX_SCALE
+#define K7T  0x029a // 1.3 * 2^RATIO_SCALE
+#define B7T  0x0018 // 0.00146 * 2^LUX_SCALE
+#define M7T  0x0012 // 0.00112 * 2^LUX_SCALE
+#define K8T  0x029a // 1.3 * 2^RATIO_SCALE
+#define B8T  0x0000 // 0.000 * 2^LUX_SCALE
+#define M8T  0x0000 // 0.000 * 2^LUX_SCALE
 
-	#define LUX_SCALE   14     // scale by 2^14
-	#define RATIO_SCALE 9      // scale ratio by 2^9
-	#define CH_SCALE           10     // scale channel values by 2^10
-	#define CHSCALE_TINT0      0x7517 // 322/11 * 2^CH_SCALE
-	#define CHSCALE_TINT1      0x0fe7 // 322/81 * 2^CH_SCALE
+#define LUX_SCALE   14     // scale by 2^14
+#define RATIO_SCALE 9      // scale ratio by 2^9
+#define CH_SCALE           10     // scale channel values by 2^10
+#define CHSCALE_TINT0      0x7517 // 322/11 * 2^CH_SCALE
+#define CHSCALE_TINT1      0x0fe7 // 322/81 * 2^CH_SCALE
 
 static rscs_e error;
 
-static rscs_e _write_reg8(uint8_t reg_addr, uint8_t reg_value)
+static rscs_e _write_reg8(rscs_tsl2561_t * self, uint8_t reg_addr, uint8_t reg_value)
 {
 	error = rscs_i2c_start();
 	if (error != RSCS_E_NONE)
 		return error;
 
 	// передаем адрес ведомого в режиме на запись
-	GOTO_END_IF_ERROR(rscs_i2c_send_slaw(tsl2561_addr1, rscs_i2c_slaw_write));
+	GOTO_END_IF_ERROR(rscs_i2c_send_slaw(self->i2c_addr, rscs_i2c_slaw_write));
 
 	uint8_t control_c = CMD_PREAMBLE | reg_addr;
 	GOTO_END_IF_ERROR(rscs_i2c_write(&control_c, 1));
@@ -104,64 +112,58 @@ end:
 	return error;
 }
 
-
-rscs_e rscs_tsl2561_init(void)
+// возвращает дескриптор с адресом, который укажет пользователь
+rscs_tsl2561_t * rscs_tsl2561_init(rscs_tsl2561_addr_t addr)
 {
-	// начинаем i2c транзакцию
-	GOTO_END_IF_ERROR(_write_reg8(CONTROL_REG_ADDR, 0x03)); // 0b00000011 // младшие биты 11 означают, что питание ВКЛ
-	GOTO_END_IF_ERROR(_write_reg8(TIMING_REG_ADDR, 0x02)); // 0b00000010 // младшие биты 10 означают, что время интеграции 402мс
-	GOTO_END_IF_ERROR(_write_reg8(INTERRUPT_REG_ADDR, 0x00)); // 0b00000000 // 5 и 4 биты отключают прерывания
+	rscs_tsl2561_t * self = (rscs_tsl2561_t *)malloc(sizeof(rscs_tsl2561_t ));
+	if (NULL == self)
+		return NULL;
 
+	self->i2c_addr = addr;
 
-end:
-	return error;
-
-	/*
-	error = rscs_i2c_start();
-	if (error != RSCS_E_NONE)
-		return error;
-
-	// передаем адрес ведомого в режиме на запись
-	GOTO_END_IF_ERROR(rscs_i2c_send_slaw(tsl2561_addr1, rscs_i2c_slaw_write));
-	uint8_t writeValue = 0x08 | 0x0A;
-	GOTO_END_IF_ERROR(rscs_i2c_write(&writeValue, 1)); // 0b00000011 // младшие биты 11 означают, что питание ВКЛ
-
-	error = rscs_i2c_start();
-	if (error != RSCS_E_NONE)
-		return error;
-	GOTO_END_IF_ERROR(rscs_i2c_send_slaw(tsl2561_addr1, rscs_i2c_slaw_read));
-	uint8_t regValue;
-	GOTO_END_IF_ERROR(rscs_i2c_read(&regValue, 1, true));
-
-	printf("id_value = %d\n", regValue);
-end:
-	rscs_i2c_stop();
-	return error;
-
-	*/
+	return self;
 }
 
 
-rscs_e rscs_tsl2561_read(uint16_t * sensor_data0, uint16_t * sensor_data1)
+rscs_e rscs_tsl2561_setup(rscs_tsl2561_t * self)
+{
+	rscs_e error;
+	// начинаем i2c транзакцию
+	GOTO_END_IF_ERROR(_write_reg8(self, CONTROL_REG_ADDR, 0x03)); // 0b00000011 // младшие биты 11 означают, что питание ВКЛ
+	GOTO_END_IF_ERROR(_write_reg8(self, TIMING_REG_ADDR, 0x02)); // 0b00000010 // младшие биты 10 означают, что время интеграции 402мс
+	GOTO_END_IF_ERROR(_write_reg8(self, INTERRUPT_REG_ADDR, 0x00)); // 0b00000000 // 5 и 4 биты отключают прерывания
+
+end:
+	return error;
+}
+
+void rscs_tsl2561_deinit(rscs_tsl2561_t * self)
+{
+	// TODO: Выключить TSL, чтобы он ничего не мерял почем зря
+	free(self);
+}
+
+
+rscs_e rscs_tsl2561_read(rscs_tsl2561_t * self, uint16_t * sensor_data0, uint16_t * sensor_data1)
 {
     error = rscs_i2c_start();
     if (error != RSCS_E_NONE)
         return error;
 
-    GOTO_END_IF_ERROR(rscs_i2c_send_slaw(tsl2561_addr1, rscs_i2c_slaw_write));
+    GOTO_END_IF_ERROR(rscs_i2c_send_slaw(self->i2c_addr, rscs_i2c_slaw_write));
     GOTO_END_IF_ERROR(rscs_i2c_write_byte(0x80 | 0x20 | 0x0E));
     GOTO_END_IF_ERROR(rscs_i2c_start()); // создали restart
-    GOTO_END_IF_ERROR(rscs_i2c_send_slaw(tsl2561_addr1, rscs_i2c_slaw_read));
+    GOTO_END_IF_ERROR(rscs_i2c_send_slaw(self->i2c_addr, rscs_i2c_slaw_read));
     GOTO_END_IF_ERROR(rscs_i2c_read(sensor_data1, 2, true));
     rscs_i2c_stop();
 
     error = rscs_i2c_start();
     if (error != RSCS_E_NONE)
     	return error;
-    GOTO_END_IF_ERROR(rscs_i2c_send_slaw(tsl2561_addr1, rscs_i2c_slaw_write));
+    GOTO_END_IF_ERROR(rscs_i2c_send_slaw(self->i2c_addr, rscs_i2c_slaw_write));
     GOTO_END_IF_ERROR(rscs_i2c_write_byte(0x80 | 0x20 | 0x0C));
     GOTO_END_IF_ERROR(rscs_i2c_start()); // создали restart
-    GOTO_END_IF_ERROR(rscs_i2c_send_slaw(tsl2561_addr1, rscs_i2c_slaw_read));
+    GOTO_END_IF_ERROR(rscs_i2c_send_slaw(self->i2c_addr, rscs_i2c_slaw_read));
     GOTO_END_IF_ERROR(rscs_i2c_read(sensor_data0, 2, true));
 
 end:
@@ -169,7 +171,7 @@ end:
     return error;
 }
 
-unsigned int rscs_tsl2561_get_lux(unsigned int iGain, unsigned int tInt, unsigned int ch0, unsigned int ch1, int iType)
+unsigned int rscs_tsl2561_get_lux(rscs_tsl2561_t * self, rscs_tsl2561_gain_t iGain, rscs_tsl2561_type_t iType, rscs_tsl2561_int_t tInt, unsigned int ch0, unsigned int ch1)
 	{
 
 	// iGain - масштаб (0 : 1X, 1 : 16X)
@@ -194,19 +196,15 @@ unsigned int rscs_tsl2561_get_lux(unsigned int iGain, unsigned int tInt, unsigne
 	}
 	// масштабировать, если gain НЕ 16X
 	if (!iGain) chScale = chScale << 4;   // scale 1X to 16X
-	printf("chscale = %lu\n", chScale);
 	// scale the channel values
 	channel0 = (ch0 * chScale) >> CH_SCALE;
 	channel1 = (ch1 * chScale) >> CH_SCALE;
-	printf("ch0 = %lu\n", channel0);
-	printf("ch1 = %lu\n", channel1);
 	//−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
 	// find the ratio of the channel values (Channel1/Channel0)
 	// protect against divide by zero
 	unsigned long ratio1 = 0;
 	if (channel0 != 0) ratio1 = (channel1 << (RATIO_SCALE+1)) / channel0;
 	// round the ratio value
-	printf("ratio1 = %lu\n", ratio1);
 	unsigned long ratio = (ratio1 + 1) >> 1;
 	// is ratio <= eachBreak ?
 	unsigned int b, m;
@@ -249,7 +247,6 @@ unsigned int rscs_tsl2561_get_lux(unsigned int iGain, unsigned int tInt, unsigne
 		{b=B8C; m=M8C;}
 		break;
 	}
-	printf("ratio = %lu\n", ratio);
 	unsigned long temp;
 	temp = ((channel0 * b) - (channel1 * m));
 	// do not allow negative lux value
