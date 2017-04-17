@@ -157,6 +157,7 @@ rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_par
 	descr->parameters = *params;
 
 end:
+	rscs_i2c_stop();
 	RSCS_DEBUG("BMP280: SETUP: returning %d\n", error);
 	return error;
 }
