@@ -5,6 +5,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include "librscs_config.h"
+#include "error.h"
+
 struct rscs_uart_bus;
 typedef struct rscs_uart_bus rscs_uart_bus_t;
 
@@ -23,6 +26,10 @@ typedef enum
 {
 	RSCS_UART_FLAG_ENABLE_TX = 0x01,	// использовать TX для этого уарта
 	RSCS_UART_FLAG_ENABLE_RX = 0x02,	// использовать RX для этого уарта
+#ifdef RSCS_UART_USEBUFFERS
+	RSCS_UART_FLAG_BUFFER_TX = 0x04,	// использовать буферизацию на TX для этого уарта
+	RSCS_UART_FLAG_BUFFER_RX = 0x08,	// использовать буферизацию на RX для этого уарта
+#endif
 } rscs_uart_mode_t;
 
 
@@ -59,13 +66,29 @@ void rscs_uart_set_parity(rscs_uart_bus_t * bus, rscs_uart_parity_t parity);
 // установка количества стоповых битов. Для atmega128 допустимы значения 1, 2
 void rscs_uart_set_stop_bits(rscs_uart_bus_t * bus, rscs_uart_stopbits_t stopbits);
 
-// запись на UART TX линию
-void rscs_uart_write(rscs_uart_bus_t * bus, const void * dataptr, size_t dataisize);
+// запись на UART TX линию. Функция не завершится, пока не будет записано ровно datasize байт
+// если буферизация включена - завершение работы этой функции не гарантирует того, что данные
+// уже отправлены по шине, возможно они буферизованы и будут отправлены позже
+void rscs_uart_write(rscs_uart_bus_t * bus, const void * dataptr, size_t datasize);
 
-// чтение с UART RX линии
-/* следует отметить, что данная версия библиотеки не использует буферизацию и поэтому использует исключительно аппаратный
- * буффер атмеги (1 байт). Поэтому используя эту фунцию очень легко пропустить значения */
+// чтение с UART RX линии. Функция не завершится, пока не будет прочитано ровно datasize байт (возможно что никогда не завершится)
+// если не включена буферизация - использует исключительно аппаратный
+// буффер атмеги (1 байт). Поэтому используя эту фунцию очень легко пропустить получаемые значения */
 void rscs_uart_read(rscs_uart_bus_t * bus, void * dataptr, size_t datasize);
+
+
+#ifdef RSCS_UART_USEBUFFERS
+// неблокирующая запись на шину.
+// Функция переносит данные в выходной буфер UART, пока в нем есть место.
+// когда место заканчивается - функция завершается и возвращает количество успешно записанных элементов
+// вполне может вернуть и ноль
+size_t rscs_uart_write_some(rscs_uart_bus_t * bus, const void * dataptr, size_t datasize);
+
+// неблокируеющее чтение данных с шины
+// функция читает только накопленные данные из входного буффера
+// возвращает сколько удалось прочитать. Если данных не поступало - запросто вернет ноль
+size_t rscs_uart_read_some(rscs_uart_bus_t * bus, void * dataptr, size_t datasize);
+#endif
 
 
 #endif /* RSCS_UART_H_ */

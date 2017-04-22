@@ -1,4 +1,7 @@
 #include <stdlib.h>
+#include <stdio.h>
+
+#include <util/atomic.h>
 
 #include <avr/io.h>
 
@@ -6,102 +9,211 @@
 
 #include "../servo.h"
 
+#define PRESCALER 8
+#define TEAK_IN_MS (F_CPU / 1000)
 
-#define SERVO_TIM1_A_PWM_MASK ((1<<COM1A1) | (0<<COM1A0))
-#define SERVO_TIM1_B_PWM_MASK ((1<<COM1B1) | (0<<COM1B0))
+struct rscs_servo;
+typedef struct rscs_servo rscs_servo;
 
 
-struct rscs_servo {
-	volatile uint16_t *OCR;
-	int min_angle_ms;
-	int max_angle_ms;
+struct rscs_servo{
+	uint8_t id;
+	uint8_t mask;
+	int ocr;
+	int new_ocr;
+	int min;
+	int max;
+	rscs_servo * next;
 };
 
 
-rscs_servo_t * rscs_servo_init(rscs_servo_id_t id)
+rscs_servo * head;
+rscs_servo * current;
+
+int _map(rscs_servo *t,int an)
 {
-	volatile uint16_t * target_ocr_reg = NULL;
+	int max = t->max;
+	int min = t->min;
+	int retval = ((float)an*(max - min) + 180.0 * min) / 180.0;
+	return retval;
+}
 
-	if (id == RSCS_SERVO_ID_TIM1_A)
+void rscs_servo_calibrate(int n, float min_ms, float max_ms)
+{
+	rscs_servo *t = head;
+	while(t != NULL && t->id != n)
 	{
-		// а вдруг мы уже создавали дескриптор этой сервы?
-		if (TCCR1A & SERVO_TIM1_A_PWM_MASK)
-			return NULL;
-
-		DDRB |= (1 << 1);
-		target_ocr_reg = &OCR1A;
-		TCCR1A |= SERVO_TIM1_A_PWM_MASK;
+		t = t->next;
 	}
-	else if (id == RSCS_SERVO_ID_TIM1_B)
+	if(t != NULL)
 	{
-		// а вдруг мы уже создавали дескриптор этой сервы?
-		if (TCCR1A & SERVO_TIM1_B_PWM_MASK)
-			return NULL;
+		t->min = (int) (TEAK_IN_MS * min_ms);
+		t->max = (int) (TEAK_IN_MS * max_ms);
+	}
+}
 
-		DDRB |= (1 << 2);
-		target_ocr_reg = &OCR1B;
-		TCCR1A |= SERVO_TIM1_B_PWM_MASK;
+void rscs_servo_timer_init(void)
+{
+	OCR1A = 20 * TEAK_IN_MS / PRESCALER;
+	OCR1B = current->ocr;
+
+	TCCR1A |= (0<<WGM10) | (0<<WGM11); 			// CTC, OCR1A
+	TCCR1B |= (1<<WGM12) | (0<<WGM13)
+			| (0<<CS10) | (1<<CS11) | (0<<CS12); //prescaler - 8
+#ifdef __AVR_ATmega328P__
+	TIMSK1 |= (1<<OCIE1B) | (1<<OCIE1A);
+#elif defined __AVR_ATmega128__
+	TIMSK |= (1<<OCIE1B) | (1<<OCIE1A);
+#endif
+}
+
+static inline void _init_servo(int id, rscs_servo * servo)
+{
+	servo->min = TEAK_IN_MS * 0.8 / PRESCALER;
+	servo->max = TEAK_IN_MS * 2.2 / PRESCALER;
+	servo->id = id;
+	servo->mask = (1 << id);
+	servo->ocr = (servo->max + servo->min) / 2;
+	servo->new_ocr = -1;
+}
+
+void _include_servo(rscs_servo *in)
+{
+	if(head == NULL)
+	{
+		head = in;
+		head->next = NULL;
+		return;
+	}
+	if(in->ocr <= head->ocr)
+	{
+		in->next = head;
+		head = in;
 	}
 	else
 	{
-		// мы пока не поддерживаем серв, расположенных не на таймере 1
-		return NULL;
+		rscs_servo *tmp = head;
+		while(tmp->next != NULL && tmp->next->ocr < in->ocr) //находим серву с наибольшим ocr < in->ocr
+		{
+			tmp = tmp->next;
+		}
+		if(tmp->next == NULL)
+		{
+			tmp->next = in;
+			tmp->next->next = NULL;
+		}
+		else
+		{
+			rscs_servo *buf = tmp->next;
+			tmp->next = in;
+			in->next = buf;
+		}
 	}
-
-
-	// так, ну вроде определились с настройками
-	// запускаем таймер 1
-#if F_CPU == 8000000
-	ICR1 = 80000; // FIXME: Это очевидно не верно, так как поле принимает максимум 65535. Исправить!
-#elif F_CPU == 16000000
-	ICR1 = 40000;
-#else
-#error "Wrong F_CPU value"
-#endif
-	TCCR1A |= (0<<WGM10) | (1<<WGM11);
-	TCCR1B |= (1<<WGM12) | (1<<WGM13)
-			| (0<<CS12) | (1<<CS11) | (0<<CS10);
-
-	// создаем дескриптор сервы и настраиваем
-	rscs_servo_t * servo = (rscs_servo_t * )malloc(sizeof(rscs_servo_t));
-	if (NULL == servo)
-			return servo;
-
-	servo->OCR = target_ocr_reg;
-
-	// возвращаем
-	return servo;
 }
-
-
-void rscs_servo_deinit(rscs_servo_t * servo)
+static void _exclude_servo(rscs_servo *tmp)
 {
-	// смотрим какой это канал и выключаем ШИП на соответствующем пине
-	if (servo->OCR == &OCR1A)
-		TCCR1A &= ~((1<<COM1A1) | (0<<COM1A0));
-	else if (servo->OCR == &OCR1B)
-		TCCR1A &= ~((1<<COM1B1) | (0<<COM1B0));
-
-	// если обе сервы с таймера 1 ушли - можно его вообще остановить
-	if (0 == (TCCR1A & (SERVO_TIM1_A_PWM_MASK | SERVO_TIM1_B_PWM_MASK)))
+	if(tmp == head)
 	{
-		TCCR1B &= ((1<<CS12) | (1<<CS11) | (1<<CS10));
+		head = tmp->next;
+		tmp->next = NULL;
+		return;
+	}
+	rscs_servo *previous = head;
+	while(previous->next != tmp)
+	{
+		previous = previous->next;
+	}
+	previous->next = tmp->next;
+}
+
+
+void rscs_servo_init(int n)
+{
+	RSCS_SERVO_PORT_DDR = 0xFF;
+	head = malloc(sizeof(rscs_servo));
+	_init_servo(0, head);
+	rscs_servo * temp = head;
+	for(int i = 1; i < n; i++)
+	{
+		temp->next = malloc(sizeof(rscs_servo));
+		temp = temp->next;
+		_init_servo(i, temp);
+	}
+	current = head;
+	temp->next = NULL;
+}
+
+void rscs_servo_set_angle(int n, int angle)
+{
+	rscs_servo *t = head;
+	while(t != NULL && t->id != n)
+	{
+		t = t->next;
+	}
+	if(t == NULL) { return;}
+	t->new_ocr = _map(t, angle);
+}
+
+void _servo_set_mcs(int n, int mcs)
+{
+	rscs_servo *t = head;
+	while(t != NULL && t->id != n)
+	{
+		t = t->next;
+	}
+	if(t == NULL) { return;}
+	t->new_ocr = (mcs * TEAK_IN_MS) / (1000.0 * PRESCALER) ;
+}
+
+int _set_angle(rscs_servo *servo)
+{
+	if(servo->new_ocr >= 0)
+	{
+		_exclude_servo(servo);
+		servo->ocr = servo->new_ocr;
+		servo->new_ocr = -1;
+		_include_servo(servo);
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+
+ISR(TIMER1_COMPB_vect)
+{
+	while (1)
+	{
+		RSCS_SERVO_PORT &= ~current->mask;
+		if (current->next != NULL && current->next->ocr == current->ocr){
+			current = current->next;
+		}
+		else{
+			current = current->next;
+			break;
+		}
 	}
 
-	free(servo);
+	if(current == NULL)
+	{
+		current = head;
+		while(current != NULL)
+		{
+			if(_set_angle(current))
+			{
+				current = head;
+			}
+			current = current->next;
+		}
+		current = head;
+	}
+	OCR1B = current->ocr;
+
 }
 
-
-void rscs_servo_calibrate(rscs_servo_t * servo, uint16_t min_angle_ms, uint16_t max_angle_ms)
+ISR(TIMER1_COMPA_vect)
 {
-	servo->min_angle_ms = min_angle_ms;
-	servo->max_angle_ms = max_angle_ms;
-}
-
-
-void rscs_servi_set_degrees(rscs_servo_t * servo, uint8_t angle)
-{
-	*servo->OCR =
-			(float)(servo->max_angle_ms - servo->min_angle_ms)
-			*(float)angle / 180.0f + servo->min_angle_ms;
+	RSCS_SERVO_PORT = 0xFF;
 }
