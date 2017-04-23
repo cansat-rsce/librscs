@@ -82,3 +82,6 @@ rscs_e rscs_ds18b20_read_temperature(rscs_ds18b20_t * sensor, int16_t * value_bu
 	return RSCS_E_NONE;
 }
 
+float rscs_ds18b20_count_temperature(rscs_ds18b20_t * sensor, int16_t raw_value){
+	return raw_value / 16.0f;
+}
