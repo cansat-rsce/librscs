@@ -207,7 +207,7 @@ unsigned int rscs_tsl2561_get_lux(rscs_tsl2561_t * self, rscs_tsl2561_gain_t iGa
 	// round the ratio value
 	unsigned long ratio = (ratio1 + 1) >> 1;
 	// is ratio <= eachBreak ?
-	unsigned int b, m;
+	unsigned int b = 0, m = 0;
 	switch (iType)
 	{
 	case 0: // T, FN and CL package
