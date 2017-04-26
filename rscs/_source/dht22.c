@@ -14,15 +14,17 @@
 struct rscs_dht22_t {
 	volatile uint8_t * PORTREG, * PINREG, * DDRREG;
 	uint8_t PIN;
+	uint8_t signal_time; //У каждого DHT22 очень сильно изменяется время, обозначающее передачу нуля или единицы. Этот коэффициент показывает, во сколько раз реальные длительности отличаются от предполагаемых (28us для '0' и 70us для '1').
 };
 
-rscs_dht22_t *  rscs_dht22_init(volatile uint8_t * PORTREG, volatile uint8_t * PINREG, volatile uint8_t * DDRREG, uint8_t PIN)
+rscs_dht22_t *  rscs_dht22_init(volatile uint8_t * PORTREG, volatile uint8_t * PINREG, volatile uint8_t * DDRREG, uint8_t PIN, float signal_time_divisor)
 {
 	rscs_dht22_t * dht = malloc(sizeof(rscs_dht22_t));
 	dht->PORTREG = PORTREG;
 	dht->PINREG = PINREG;
 	dht->DDRREG = DDRREG;
 	dht->PIN = PIN;
+	dht->signal_time = (uint8_t)(35 / signal_time_divisor);
 	*(dht->PORTREG) &= ~(1 << dht->PIN);
 	*(dht->DDRREG) &= ~(1 << dht->PIN);
 	return dht;
@@ -135,7 +137,7 @@ inline static int _read_bit(rscs_dht22_t * dht)
 	if (!bitStartedOrEnded)
 		return RSCS_E_TIMEOUT;
 
-	if(i > 5) {
+	if(i > 35 / dht->signal_time) {
 		//printf("111111111`11111\n");
 		return 1;
 	}
