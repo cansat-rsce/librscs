@@ -1,0 +1,196 @@
+#include <avr/io.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <util/delay.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#include "librscs_config.h"
+#include "../error.h"
+
+#include "../dht22.h"
+
+struct rscs_dht22_t {
+	volatile uint8_t * PORTREG, * PINREG, * DDRREG;
+	uint8_t PIN;
+};
+
+rscs_dht22_t *  rscs_dht22_init(volatile uint8_t * PORTREG, volatile uint8_t * PINREG, volatile uint8_t * DDRREG, uint8_t PIN)
+{
+	rscs_dht22_t * dht = malloc(sizeof(rscs_dht22_t));
+	dht->PORTREG = PORTREG;
+	dht->PINREG = PINREG;
+	dht->DDRREG = DDRREG;
+	dht->PIN = PIN;
+	*(dht->PORTREG) &= ~(1 << dht->PIN);
+	*(dht->DDRREG) &= ~(1 << dht->PIN);
+	return dht;
+}
+
+
+inline static void _set_bus_zero(rscs_dht22_t * dht)
+{
+	*(dht->DDRREG) |= (1 << (dht->PIN));
+}
+
+
+inline static void _set_bus_one(rscs_dht22_t * dht)
+{
+	*(dht->DDRREG) &= ~(1 << (dht->PIN));
+}
+
+
+inline static int _read_bus(rscs_dht22_t * dht)
+{
+	if ((*(dht->PINREG) & (1 << (dht->PIN))) != 0)
+		return 1;
+	else
+		return 0;
+}
+
+
+// начало связи с dht
+// если все хорошо возвращает ноль
+// если устроиство не отвечает то возвращает RSCS_E_NODEVICE
+// если линия не поднялась после ответа за заданное время возвращает RSCS_E_TIMEOUT
+inline static rscs_e _reset(rscs_dht22_t * dht)
+{
+	_set_bus_zero(dht);
+	_delay_us(1500);
+	_set_bus_one(dht);
+	_delay_us(10);
+
+ 	bool isSomeoneHere = false;
+	for (int i = 0; i < 30+80; i++)
+	{
+		if (_read_bus(dht) == 0)
+		{
+			isSomeoneHere = true;
+			break;
+		}
+
+		_delay_us(1);
+	}
+
+	if (!isSomeoneHere)
+		return RSCS_E_NODEVICE;
+
+	for (int i = 0; i < 120; i++)
+	{
+		if(_read_bus(dht) != 0 )
+			return RSCS_E_NONE;
+	}
+
+	return RSCS_E_TIMEOUT;
+}
+
+
+inline static rscs_e _wait_start_bit(rscs_dht22_t * dht){
+
+	int value = 0;
+
+	for(int i = 0; i < 100; i++){
+		if(_read_bus(dht) == 0){
+			value = 1;
+			break;
+		}
+		_delay_us(1);
+	}
+
+	if(!value) return RSCS_E_TIMEOUT;
+	return RSCS_E_NONE;
+}
+
+
+// если значение отрицательное, то это код ошибки:
+// 		RSCS_E_TIMEOUT - истечение времени ожидания опускания или подъёма линии
+// из положительных значений возвращает 0 или 1
+inline static int _read_bit(rscs_dht22_t * dht)
+{
+	register uint8_t bitStartedOrEnded = false;
+	for (uint8_t i = 0; i < 50; i++)
+	{
+		_delay_us(1);
+		if (_read_bus(dht) != 0)
+		{
+			bitStartedOrEnded = true;
+			break;
+		}
+	}
+
+	if (!bitStartedOrEnded) return RSCS_E_TIMEOUT;
+
+	bitStartedOrEnded = false;
+	uint8_t i;
+	for (i = 0; i < 100; i++){
+		_delay_us(1);
+		if (_read_bus(dht) == 0)
+		{
+			bitStartedOrEnded = true;
+			break;
+		}
+	}
+
+	if (!bitStartedOrEnded)
+		return RSCS_E_TIMEOUT;
+
+	if(i > 5) {
+		//printf("111111111`11111\n");
+		return 1;
+	}
+	else return 0;
+}
+
+
+inline static rscs_e _read_byte(rscs_dht22_t * dht){
+	int num[8];
+	for(int i = 0; i < 8; i++){
+		int value = _read_bit(dht);
+		if (value < 0)
+			return value;
+
+		num[i] = value;
+	}
+
+	uint8_t retval = 0;
+	retval = num[0] << 7;
+
+
+	for(int i = 1, j = 6; j >= 0; i++ , j--){
+		retval = retval | num[i] << j;
+	}
+
+	return retval;
+}
+
+
+rscs_e rscs_dht22_read(rscs_dht22_t * dht, uint16_t * humidity, int16_t * temp)
+{
+	rscs_e reset_status = _reset(dht);
+	if (reset_status != RSCS_E_NONE)
+		return reset_status;
+
+	rscs_e wait_start_status = _wait_start_bit(dht);
+	if (wait_start_status != RSCS_E_NONE)
+		return wait_start_status;
+
+	uint8_t sum[5];
+	for( int i = 0; i<5; i++){
+		sum[i] = _read_byte(dht);
+		if (sum[i] < 0)
+			return sum[i];
+	}
+
+	uint8_t* tempptr = (uint8_t*)temp;
+	*(tempptr + 0) = sum[2];
+	*(tempptr + 1) = sum[3];
+
+	*humidity = (sum[0] << 8) | sum[1];
+	*temp = (sum[2] << 8) | sum[3];
+
+	if (((sum[0] + sum[1] + sum[2] + sum[3]) & 0xFF) != sum[4])
+		return RSCS_E_CHKSUM;
+
+	return RSCS_E_NONE;
+}
