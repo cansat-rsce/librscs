@@ -13,6 +13,13 @@
 struct rscs_ads1115_t;
 typedef struct rscs_ads1115_t rscs_ads1115_t;
 
+#define RSCS_ADS1115_MV_PER_PARROT_6DOT144 0.1875f
+#define RSCS_ADS1115_MV_PER_PARROT_4DOT096 0.125f
+#define RSCS_ADS1115_MV_PER_PARROT_2DOT048 0.0625f
+#define RSCS_ADS1115_MV_PER_PARROT_1DOT024 0.03125f
+#define RSCS_ADS1115_MV_PER_PARROT_0DOT512 0.015625f
+#define RSCS_ADS1115_MV_PER_PARROT_0DOT256 0.007813f
+
 //Перечисление режимов измерения
 typedef enum {
 	RSCS_ADS1115_CHANNEL_0			= 4, //Волшебные числа - то, что надо записать в регистр
@@ -90,6 +97,9 @@ rscs_e rscs_ads1115_read(rscs_ads1115_t * device, int16_t * value);
 // Дождаться окончания измерения
 // (имеет смысл только в одиночном режиме, в режиме множества измеерний сразу закончит ждать)
 rscs_e rscs_ads1115_wait_result(rscs_ads1115_t * device);
+
+// Перевод чырых значений в милливольты
+float rscs_ads1115_convert(int16_t rawdata);
 
 //TODO в будущем возможна реализация функциональности компаратора
 
