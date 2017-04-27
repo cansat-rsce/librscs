@@ -96,7 +96,7 @@ struct rscs_bmp280_descriptor {
 	rscs_bmp280_calibration_values_t calibration_values;
 	// Режим работы - непрерывный, одиночный, ожидания
 	rscs_bmp280_mode_t mode;
-	i2c_addr_t addr;
+	rscs_bmp280_addr_t addr;
 };
 
 rscs_bmp280_descriptor_t * rscs_bmp280_initspi(){
@@ -104,7 +104,7 @@ rscs_bmp280_descriptor_t * rscs_bmp280_initspi(){
 	return pointer;
 }
 
-rscs_bmp280_descriptor_t * rscs_bmp280_initi2c(i2c_addr_t addr){
+rscs_bmp280_descriptor_t * rscs_bmp280_initi2c(rscs_bmp280_addr_t addr){
 	rscs_bmp280_descriptor_t * pointer = (rscs_bmp280_descriptor_t *) malloc(sizeof(rscs_bmp280_descriptor_t));
 	pointer->addr = addr;
 	return pointer;
@@ -117,18 +117,12 @@ void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr){
 rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_parameters_t * params){
 	rscs_e error = RSCS_E_NONE;
 	uint8_t tmp[2] = {231, 123};
-#if RSCS_BMP280_IF == RSCS_IF_I2C
-	descr->addr = RSCS_BMP280_I2C_ADDR_LOW;
-#endif
 
 #ifdef RSCS_DEBUGMODE
 	for(int i = 0; i < sizeof(descr->calibration_values); i++) {
 		*( ( (uint8_t *) &descr->calibration_values) + i ) = 237;
 	}
 #endif
-
-	RSCS_DEBUG("BMP280: SETUP: trying to IFINIT\n");
-	IFINIT
 
 	_delay_ms(50);
 
@@ -163,6 +157,7 @@ rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_par
 	descr->parameters = *params;
 
 end:
+	rscs_i2c_stop();
 	RSCS_DEBUG("BMP280: SETUP: returning %d\n", error);
 	return error;
 }

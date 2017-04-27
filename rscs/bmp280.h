@@ -22,8 +22,10 @@
 #define RSCS_BMP280_IDCODE 0x58
 
 //Возможные адреса на I2C
-#define RSCS_BMP280_I2C_ADDR_HIGH	0x77
-#define RSCS_BMP280_I2C_ADDR_LOW	0x76
+typedef enum {
+	RSCS_BMP280_I2C_ADDR_HIGH 	= 0x77,
+	RSCS_BMP280_I2C_ADDR_LOW 	= 0x76,
+} rscs_bmp280_addr_t;
 
 //Количество измерений на один результат. Выставляется отдельно для термометра и барометра
 typedef enum {
@@ -117,7 +119,7 @@ typedef struct rscs_bmp280_descriptor rscs_bmp280_descriptor_t;
 // Не инициализирует сам датчик.
 // Вызывайте только одну ф-ю в зависимости от нужного интерфейса
 rscs_bmp280_descriptor_t * rscs_bmp280_initspi();
-rscs_bmp280_descriptor_t * rscs_bmp280_initi2c(i2c_addr_t addr);
+rscs_bmp280_descriptor_t * rscs_bmp280_initi2c(rscs_bmp280_addr_t addr);
 
 // Освобождение дескритора датчика
 void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr);
