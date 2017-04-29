@@ -212,6 +212,7 @@ float rscs_ads1115_convert(rscs_ads1115_t * device, int16_t rawdata) {
 
 	case RSCS_ADS1115_RANGE_0DOT256:
 			return rawdata * RSCS_ADS1115_MV_PER_PARROT_0DOT256;
+	default: return 0;
 	}
 }
 
