@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <util/delay.h>
+#include <util/atomic.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -137,7 +138,7 @@ inline static int _read_bit(rscs_dht22_t * dht)
 	if (!bitStartedOrEnded)
 		return RSCS_E_TIMEOUT;
 
-	if(i > 35 / dht->signal_time) {
+	if(i > dht->signal_time) {
 		//printf("111111111`11111\n");
 		return 1;
 	}
@@ -169,30 +170,43 @@ inline static rscs_e _read_byte(rscs_dht22_t * dht){
 
 rscs_e rscs_dht22_read(rscs_dht22_t * dht, uint16_t * humidity, int16_t * temp)
 {
-	rscs_e reset_status = _reset(dht);
-	if (reset_status != RSCS_E_NONE)
-		return reset_status;
+	rscs_e error = RSCS_E_NONE;
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+		rscs_e reset_status = _reset(dht);
+		if (reset_status != RSCS_E_NONE)
+			error = reset_status;
 
-	rscs_e wait_start_status = _wait_start_bit(dht);
-	if (wait_start_status != RSCS_E_NONE)
-		return wait_start_status;
+		else {
+			rscs_e wait_start_status = _wait_start_bit(dht);
+			if (wait_start_status != RSCS_E_NONE)
+				error = wait_start_status;
 
-	uint8_t sum[5];
-	for( int i = 0; i<5; i++){
-		sum[i] = _read_byte(dht);
-		if (sum[i] < 0)
-			return sum[i];
+			else {
+				uint8_t sum[5];
+				bool needcontinue = true;
+				for( int i = 0; i<5; i++){
+					sum[i] = _read_byte(dht);
+					if (sum[i] < 0){
+						error = sum[i];
+						needcontinue = false;
+						break;
+					}
+				}
+
+				if(needcontinue) {
+					uint8_t* tempptr = (uint8_t*)temp;
+					*(tempptr + 0) = sum[2];
+					*(tempptr + 1) = sum[3];
+
+					*humidity = (sum[0] << 8) | sum[1];
+					*temp = (sum[2] << 8) | sum[3];
+
+					if (((sum[0] + sum[1] + sum[2] + sum[3]) & 0xFF) != sum[4])
+						error = RSCS_E_CHKSUM;
+				}
+			}
+		}
 	}
 
-	uint8_t* tempptr = (uint8_t*)temp;
-	*(tempptr + 0) = sum[2];
-	*(tempptr + 1) = sum[3];
-
-	*humidity = (sum[0] << 8) | sum[1];
-	*temp = (sum[2] << 8) | sum[3];
-
-	if (((sum[0] + sum[1] + sum[2] + sum[3]) & 0xFF) != sum[4])
-		return RSCS_E_CHKSUM;
-
-	return RSCS_E_NONE;
+	return error;
 }
