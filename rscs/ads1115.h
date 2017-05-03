@@ -98,8 +98,8 @@ rscs_e rscs_ads1115_read(rscs_ads1115_t * device, int16_t * value);
 // (имеет смысл только в одиночном режиме, в режиме множества измеерний сразу закончит ждать)
 rscs_e rscs_ads1115_wait_result(rscs_ads1115_t * device);
 
-// Перевод чырых значений в милливольты
-float rscs_ads1115_convert(int16_t rawdata);
+// Перевод сырых значений в милливольты
+float rscs_ads1115_convert(rscs_ads1115_t * device, int16_t rawdata);
 
 //TODO в будущем возможна реализация функциональности компаратора
 
