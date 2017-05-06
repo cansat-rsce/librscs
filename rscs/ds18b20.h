@@ -54,4 +54,7 @@ bool rscs_ds18b20_check_ready(void);
 	Если контрольная сумма сообщения, полученного от датчика не сошлась - возвращает код ошибки RSCS_E_CHKSUM */
 rscs_e rscs_ds18b20_read_temperature(rscs_ds18b20_t * sensor, int16_t * value_buffer);
 
+// Функция для конвертирования сырого значения температуры, получаемого с ds18b20, в градусы цельсия.
+float rscs_ds18b20_count_temperature(rscs_ds18b20_t * sensor, int16_t raw_value);
+
 #endif /* DS18B20_H_ */

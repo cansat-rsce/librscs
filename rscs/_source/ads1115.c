@@ -39,11 +39,13 @@
 
 struct rscs_ads1115_t {
 	i2c_addr_t address;
+	rscs_ads1115_range_t range;
 };
 
 rscs_ads1115_t * rscs_ads1115_init(i2c_addr_t addr) {
 	rscs_ads1115_t * adc = malloc(sizeof(rscs_ads1115_t));
 	adc->address = addr;
+	adc->range = RSCS_ADS1115_RANGE_2DOT048;
 
 	return adc;
 }
@@ -80,6 +82,8 @@ rscs_e rscs_ads1115_set_range(rscs_ads1115_t * device, rscs_ads1115_range_t rang
 	config &= ~((1 << 11) | (1 << 10) | (1 << 9));
 	config |= (range << 9);
 	ADS_I2C_WRITEREG(device->address, RSCS_ADS1115_REG_CONFIG, &config)
+
+	device->range = range;
 
 end:
 	rscs_i2c_stop();
@@ -187,6 +191,29 @@ rscs_e rscs_ads1115_wait_result(rscs_ads1115_t * device) {
 end:
 	rscs_i2c_stop();
 	return error;
+}
+
+float rscs_ads1115_convert(rscs_ads1115_t * device, int16_t rawdata) {
+	switch(device->range) {
+	case RSCS_ADS1115_RANGE_6DOT144:
+			return rawdata * RSCS_ADS1115_MV_PER_PARROT_6DOT144;
+
+	case RSCS_ADS1115_RANGE_4DOT096:
+			return rawdata * RSCS_ADS1115_MV_PER_PARROT_4DOT096;
+
+	case RSCS_ADS1115_RANGE_2DOT048:
+			return rawdata * RSCS_ADS1115_MV_PER_PARROT_2DOT048;
+
+	case RSCS_ADS1115_RANGE_1DOT024:
+			return rawdata * RSCS_ADS1115_MV_PER_PARROT_1DOT024;
+
+	case RSCS_ADS1115_RANGE_0DOT512:
+			return rawdata * RSCS_ADS1115_MV_PER_PARROT_0DOT512;
+
+	case RSCS_ADS1115_RANGE_0DOT256:
+			return rawdata * RSCS_ADS1115_MV_PER_PARROT_0DOT256;
+	default: return 0;
+	}
 }
 
 #undef OPERATION
