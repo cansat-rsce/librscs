@@ -68,22 +68,19 @@ rscs_ads1115_t * rscs_ads1115_init(i2c_addr_t addr);
 // Деинициализация и освобождение дескритора
 void rscs_ads1115_deinit(rscs_ads1115_t * device);
 
-// Изменение канала измерений
-rscs_e rscs_ads1115_set_channel(rscs_ads1115_t * device, rscs_ads1115_channel_t channel);
-
 // Изменение диапазона
 rscs_e rscs_ads1115_set_range(rscs_ads1115_t * device, rscs_ads1115_range_t range);
 
 // Изменение  измерений
 rscs_e rscs_ads1115_set_datarate(rscs_ads1115_t * device, rscs_ads1115_datarate_t datarate);
 
-// Начало одиночного измерения
+// Начало одиночного измерения на определённом канале
 // Выдаст RSCS_E_BUSY, если есть измерение в процессе
-rscs_e rscs_ads1115_start_single(rscs_ads1115_t * device);
+rscs_e rscs_ads1115_start_single(rscs_ads1115_t * device, rscs_ads1115_channel_t channel);
 
-// Начало повторяющихся измерений
+// Начало повторяющихся измерений определённом канале
 // Выдаст RSCS_E_BUSY, если есть измерение в процессе
-rscs_e rscs_ads1115_start_continuous(rscs_ads1115_t * device);
+rscs_e rscs_ads1115_start_continuous(rscs_ads1115_t * device, rscs_ads1115_channel_t channel);
 
 // Конец повторяющихся измерений
 rscs_e rscs_ads1115_stop_continuous(rscs_ads1115_t * device);
@@ -93,6 +90,10 @@ rscs_e rscs_ads1115_stop_continuous(rscs_ads1115_t * device);
    - device - дескриптор датчика
    - value - указатель на переменную, в которую следует разместить результат измерения */
 rscs_e rscs_ads1115_read(rscs_ads1115_t * device, int16_t * value);
+
+/*Полный цикл измерения: запуск-ожидание-чтение.
+ * В комплекте идёт кресло качалка и плед, чтобы скрасить томительное ожидание*/
+rscs_e rscs_ads1115_take(rscs_ads1115_t * device, rscs_ads1115_channel_t channel, int16_t * value);
 
 // Дождаться окончания измерения
 // (имеет смысл только в одиночном режиме, в режиме множества измеерний сразу закончит ждать)

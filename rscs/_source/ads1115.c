@@ -54,7 +54,7 @@ void rscs_ads1115_deinit(rscs_ads1115_t * device) {
 	free(device);
 }
 
-rscs_e rscs_ads1115_set_channel(rscs_ads1115_t * device, rscs_ads1115_channel_t channel) {
+static rscs_e _set_channel(rscs_ads1115_t * device, rscs_ads1115_channel_t channel) {
 	rscs_e error = RSCS_E_NONE;
 
 	uint16_t config = 0;
@@ -107,8 +107,10 @@ end:
 	return error;
 }
 
-rscs_e rscs_ads1115_start_single(rscs_ads1115_t * device) {
+rscs_e rscs_ads1115_start_single(rscs_ads1115_t * device, rscs_ads1115_channel_t channel) {
 	rscs_e error = RSCS_E_NONE;
+
+	OPERATION(_set_channel(device, channel))
 
 	uint16_t config = 0;
 
@@ -130,8 +132,10 @@ end:
 	return error;
 }
 
-rscs_e rscs_ads1115_start_continuous(rscs_ads1115_t * device) {
+rscs_e rscs_ads1115_start_continuous(rscs_ads1115_t * device, rscs_ads1115_channel_t channel) {
 	rscs_e error = RSCS_E_NONE;
+
+	OPERATION(_set_channel(device, channel))
 
 	uint16_t config = 0;
 
@@ -187,6 +191,18 @@ rscs_e rscs_ads1115_wait_result(rscs_ads1115_t * device) {
 		if((config & (1 << 15))) break;
 		if(!(config & (1 << 8))) break;
 	}
+
+end:
+	rscs_i2c_stop();
+	return error;
+}
+
+rscs_e rscs_ads1115_take(rscs_ads1115_t * device, rscs_ads1115_channel_t channel, int16_t * value) {
+	rscs_e error = RSCS_E_NONE;
+
+	OPERATION(rscs_ads1115_start_continuous(device, channel))
+	OPERATION(rscs_ads1115_wait_result(device))
+	OPERATION(rscs_ads1115_read(device, value))
 
 end:
 	rscs_i2c_stop();
