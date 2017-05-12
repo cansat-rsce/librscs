@@ -75,11 +75,9 @@ rscs_e rscs_ads1115_set_range(rscs_ads1115_t * device, rscs_ads1115_range_t rang
 rscs_e rscs_ads1115_set_datarate(rscs_ads1115_t * device, rscs_ads1115_datarate_t datarate);
 
 // Начало одиночного измерения на определённом канале
-// Выдаст RSCS_E_BUSY, если есть измерение в процессе
 rscs_e rscs_ads1115_start_single(rscs_ads1115_t * device, rscs_ads1115_channel_t channel);
 
 // Начало повторяющихся измерений определённом канале
-// Выдаст RSCS_E_BUSY, если есть измерение в процессе
 rscs_e rscs_ads1115_start_continuous(rscs_ads1115_t * device, rscs_ads1115_channel_t channel);
 
 // Конец повторяющихся измерений

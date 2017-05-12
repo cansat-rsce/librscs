@@ -22,10 +22,10 @@ static rscs_e _i2c_readreg(uint8_t addr, uint8_t reg, void * data) {
 
 	rscs_e error = RSCS_E_NONE;
 
-	rscs_i2c_start();
+	OPERATION(rscs_i2c_start());
 	OPERATION(rscs_i2c_send_slaw(addr, rscs_i2c_slaw_write))
 	OPERATION(rscs_i2c_write_byte(reg))
-	rscs_i2c_start();
+	OPERATION(rscs_i2c_start());
 	OPERATION(rscs_i2c_send_slaw(addr, rscs_i2c_slaw_read))
 	OPERATION(rscs_i2c_read(data_u16, 2, true))
 	CHBYTEORDER(*data_u16)
@@ -35,16 +35,16 @@ end:
 	return error;
 }
 
-static rscs_e _i2c_writereg(uint8_t addr, uint8_t reg, uint16_t * data) {
+static rscs_e _i2c_writereg(uint8_t addr, uint8_t reg, const uint16_t * data) {
 	rscs_e error = RSCS_E_NONE;
 
-	rscs_i2c_start();
+	OPERATION(rscs_i2c_start());
 	OPERATION(rscs_i2c_send_slaw(addr, rscs_i2c_slaw_write))
 	OPERATION(rscs_i2c_write_byte(reg))
-	CHBYTEORDER(*data)
-	OPERATION(rscs_i2c_write(data, 2))
-	CHBYTEORDER(*data)
 
+	uint16_t dataswapped = *data;
+	CHBYTEORDER(dataswapped);
+	OPERATION(rscs_i2c_write(&dataswapped, 2))
 end:
 	rscs_i2c_stop();
 	return error;
@@ -82,7 +82,6 @@ static rscs_e _set_channel(rscs_ads1115_t * device, rscs_ads1115_channel_t chann
 	OPERATION(_i2c_writereg(device->address, RSCS_ADS1115_REG_CONFIG, &config))
 
 end:
-	rscs_i2c_stop();
 	return error;
 }
 
@@ -100,7 +99,6 @@ rscs_e rscs_ads1115_set_range(rscs_ads1115_t * device, rscs_ads1115_range_t rang
 	device->range = range;
 
 end:
-	rscs_i2c_stop();
 	return error;
 }
 
@@ -117,7 +115,6 @@ rscs_e rscs_ads1115_set_datarate(rscs_ads1115_t * device, rscs_ads1115_datarate_
 	OPERATION(_i2c_writereg(device->address, RSCS_ADS1115_REG_CONFIG, &config))
 
 end:
-	rscs_i2c_stop();
 	return error;
 }
 
@@ -127,13 +124,7 @@ rscs_e rscs_ads1115_start_single(rscs_ads1115_t * device, rscs_ads1115_channel_t
 	OPERATION(_set_channel(device, channel))
 
 	uint16_t config = 0;
-
 	OPERATION(_i2c_readreg(device->address, RSCS_ADS1115_REG_CONFIG, &config))
-
-	if(!(config & (1 << 15))){
-		error = RSCS_E_BUSY;
-		goto end;
-	}
 
 	config |= (1 << 8);
 	OPERATION(_i2c_writereg(device->address, RSCS_ADS1115_REG_CONFIG, &config))
@@ -142,7 +133,6 @@ rscs_e rscs_ads1115_start_single(rscs_ads1115_t * device, rscs_ads1115_channel_t
 	OPERATION(_i2c_writereg(device->address, RSCS_ADS1115_REG_CONFIG, &config))
 
 end:
-	rscs_i2c_stop();
 	return error;
 }
 
@@ -152,16 +142,12 @@ rscs_e rscs_ads1115_start_continuous(rscs_ads1115_t * device, rscs_ads1115_chann
 	OPERATION(_set_channel(device, channel))
 
 	uint16_t config = 0;
-
 	OPERATION(_i2c_readreg(device->address, RSCS_ADS1115_REG_CONFIG, &config))
 
-	if(!(config & (1 << 15))){
-		error = RSCS_E_BUSY;
-		goto end;
-	}
-
 	config &= ~(1 << 8);
+	OPERATION(_i2c_writereg(device->address, RSCS_ADS1115_REG_CONFIG, &config))
 
+	config |= (1 << 15);
 	OPERATION(_i2c_writereg(device->address, RSCS_ADS1115_REG_CONFIG, &config))
 
 end:
@@ -214,12 +200,12 @@ end:
 rscs_e rscs_ads1115_take(rscs_ads1115_t * device, rscs_ads1115_channel_t channel, int16_t * value) {
 	rscs_e error = RSCS_E_NONE;
 
-	OPERATION(rscs_ads1115_start_continuous(device, channel))
+	OPERATION(rscs_ads1115_start_single(device, channel))
 	OPERATION(rscs_ads1115_wait_result(device))
 	OPERATION(rscs_ads1115_read(device, value))
 
 end:
-	rscs_i2c_stop();
+	//rscs_i2c_stop();
 	return error;
 }
 
