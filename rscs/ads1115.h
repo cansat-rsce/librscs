@@ -13,6 +13,13 @@
 struct rscs_ads1115_t;
 typedef struct rscs_ads1115_t rscs_ads1115_t;
 
+#define RSCS_ADS1115_MV_PER_PARROT_6DOT144 0.1875f
+#define RSCS_ADS1115_MV_PER_PARROT_4DOT096 0.125f
+#define RSCS_ADS1115_MV_PER_PARROT_2DOT048 0.0625f
+#define RSCS_ADS1115_MV_PER_PARROT_1DOT024 0.03125f
+#define RSCS_ADS1115_MV_PER_PARROT_0DOT512 0.015625f
+#define RSCS_ADS1115_MV_PER_PARROT_0DOT256 0.007813f
+
 //Перечисление режимов измерения
 typedef enum {
 	RSCS_ADS1115_CHANNEL_0			= 4, //Волшебные числа - то, что надо записать в регистр
@@ -61,22 +68,17 @@ rscs_ads1115_t * rscs_ads1115_init(i2c_addr_t addr);
 // Деинициализация и освобождение дескритора
 void rscs_ads1115_deinit(rscs_ads1115_t * device);
 
-// Изменение канала измерений
-rscs_e rscs_ads1115_set_channel(rscs_ads1115_t * device, rscs_ads1115_channel_t channel);
-
 // Изменение диапазона
 rscs_e rscs_ads1115_set_range(rscs_ads1115_t * device, rscs_ads1115_range_t range);
 
 // Изменение  измерений
 rscs_e rscs_ads1115_set_datarate(rscs_ads1115_t * device, rscs_ads1115_datarate_t datarate);
 
-// Начало одиночного измерения
-// Выдаст RSCS_E_BUSY, если есть измерение в процессе
-rscs_e rscs_ads1115_start_single(rscs_ads1115_t * device);
+// Начало одиночного измерения на определённом канале
+rscs_e rscs_ads1115_start_single(rscs_ads1115_t * device, rscs_ads1115_channel_t channel);
 
-// Начало повторяющихся измерений
-// Выдаст RSCS_E_BUSY, если есть измерение в процессе
-rscs_e rscs_ads1115_start_continuous(rscs_ads1115_t * device);
+// Начало повторяющихся измерений определённом канале
+rscs_e rscs_ads1115_start_continuous(rscs_ads1115_t * device, rscs_ads1115_channel_t channel);
 
 // Конец повторяющихся измерений
 rscs_e rscs_ads1115_stop_continuous(rscs_ads1115_t * device);
@@ -87,9 +89,16 @@ rscs_e rscs_ads1115_stop_continuous(rscs_ads1115_t * device);
    - value - указатель на переменную, в которую следует разместить результат измерения */
 rscs_e rscs_ads1115_read(rscs_ads1115_t * device, int16_t * value);
 
+/*Полный цикл измерения: запуск-ожидание-чтение.
+ * В комплекте идёт кресло качалка и плед, чтобы скрасить томительное ожидание*/
+rscs_e rscs_ads1115_take(rscs_ads1115_t * device, rscs_ads1115_channel_t channel, int16_t * value);
+
 // Дождаться окончания измерения
 // (имеет смысл только в одиночном режиме, в режиме множества измеерний сразу закончит ждать)
 rscs_e rscs_ads1115_wait_result(rscs_ads1115_t * device);
+
+// Перевод сырых значений в милливольты
+float rscs_ads1115_convert(rscs_ads1115_t * device, int16_t rawdata);
 
 //TODO в будущем возможна реализация функциональности компаратора
 
