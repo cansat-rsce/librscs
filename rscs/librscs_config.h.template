@@ -11,23 +11,31 @@
 
 
 // ========================================================
+// Настройки модуля ADXL345
+// ========================================================
+// Настройка пина CS
+#define ADXL345_CS_DDR			DDRB	// регистр DDR порта, на котором расположен CS пин
+#define ADXL345_CS_PORT			PORTB	// регистр PORT порта, на котором расположен CS пин
+#define ADXL345_CS_PIN			4		// номер пина CS в порту
+
+
+
+// ========================================================
 // Установка режима debug (отладочные сообщения и т.д.)
 // Для включения раскомментируйте
 // ========================================================
 
 //#define RSCS_DEBUGMODE 1
 
-
-
 // ========================================================
-// Перечисление интерфейсов для возможности выбора там, где это надо
+// настройки GPS
 // ========================================================
-enum rscs_enum_ifaces {
-	RSCS_IF_UART,
-	RSCS_IF_I2C,
-	RSCS_IF_SPI,
-};
-
+// размер буфера для накопления сообщения
+#define RSCS_GPS_BUFFER_SIZE (100)
+// очевидные настройки уарта
+#define RSCS_GPS_UART_BAUD_RATE (9600)
+#define RSCS_GPS_UART_STOP_BITS (1)
+#define RSCS_GPS_UART_PARITY (RSCS_UART_PARITY_NONE)
 
 
 // ========================================================
@@ -70,7 +78,7 @@ enum rscs_enum_ifaces {
 // Длительность такта ожидания Таймаута на I2C операции (в микросекундах)
 #define RSCS_I2C_TIMEOUT_US		(100)
 // Количетво тактов ожидания таймаута на I2C операции
-#define RSCS_I2C_TIMEOUT_CYCLES	(5)
+#define RSCS_I2C_TIMEOUT_CYCLES	(10)
 
 
 
@@ -105,13 +113,10 @@ enum rscs_enum_ifaces {
 // Настройки зависят от микроконтроллера - это пины, на которые выведены каналы захвата-сравнения таймера 1
 #ifdef __AVR_ATmega328P__
 
-#define RSCS_SERVO_TIM1_A_REG_DDR	(DDRB)
-#define RSCS_SERVO_TIM1_A_PIN_MASK	(1 << 1)
-
-#define RSCS_SERVO_TIM1_B_REG_DDR	(DDRB)
-#define RSCS_SERVO_TIM1_B_PIN_MASK	(1 << 2)
-
 #elif defined __AVR_ATmega128__
+
+#define RSCS_SERVO_PORT (PORTA)
+#define RSCS_SERVO_PORT_DDR (DDRA)
 // TODO: Посмотреть в даташите
 #endif
 
@@ -130,10 +135,11 @@ enum rscs_enum_ifaces {
 // ========================================================
 // Настройки модуля BMP280
 // ========================================================
-//Выбор интерфейса обмена (SPI или I2C)
-#define RSCS_BMP280_IF SPI
+//Выбор интерфейса обмена (SPI или I2C) (раскомментируйте нужный)
+//#define RSCS_BMP280_IF_I2C
+//#define RSCS_BMP280_IF_SPI
 
-#if RSCS_BMP280_IF == SPI
+#ifdef RSCS_BMP280_IF_SPI
 // Настройки пина CS
 #define RSCS_BMP280_CSDDR DDRB
 #define RSCS_BMP280_CSPORT PORTB
@@ -142,6 +148,16 @@ enum rscs_enum_ifaces {
 #define RSCS_BMP280_SPI_FREQ_kHz 64
 
 #endif //RSCS_BMP280_IF == SPI
+
+
+
+// ========================================================
+// Настройки модуля ADXL345
+// ========================================================
+// Настройка пина CS
+#define ADXL345_CS_DDR			DDRB	// регистр DDR порта, на котором расположен CS пин
+#define ADXL345_CS_PORT			PORTB	// регистр PORT порта, на котором расположен CS пин
+#define ADXL345_CS_PIN			4		// номер пина CS в порту
 
 
 

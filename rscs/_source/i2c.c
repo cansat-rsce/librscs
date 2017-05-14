@@ -48,7 +48,7 @@ void rscs_i2c_init(void)
 {
 	if(_i2c_internal_needinit){
 		// настраиваем частоту на стандартные 100 кГц
-		rscs_i2c_set_scl_rate(100);
+		rscs_i2c_set_scl_rate(16);
 
 		// сбрасываем модуль в исходное состояние
 		_i2c_internal_needinit = false;
@@ -58,7 +58,7 @@ void rscs_i2c_init(void)
 
 void rscs_i2c_set_scl_rate(uint32_t f_scl_kHz)
 {
-	TWBR = (uint8_t)(F_CPU/(f_scl_kHz*1000) - 16)/2/1; // формула из даташита
+	TWBR = (uint8_t)((F_CPU/(f_scl_kHz*1000) - 16)/2/1); // формула из даташита
 }
 
 
@@ -83,7 +83,7 @@ rscs_e rscs_i2c_start(void)
 
 void rscs_i2c_stop(void)
 {
-	TWCR = (1<<TWINT)|(0<<TWEN)|(1<<TWSTO);
+	TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWSTO);
 }
 
 
@@ -107,6 +107,7 @@ rscs_e rscs_i2c_send_slaw(uint8_t slave_addr, rscs_i2c_slaw_mode_t mode)
 
 	return RSCS_E_TIMEOUT;
 }
+
 
 
 rscs_e rscs_i2c_write_byte(uint8_t byte)
