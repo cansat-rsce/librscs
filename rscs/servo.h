@@ -3,31 +3,20 @@
 
 #include <stdint.h>
 
-struct rscs_servo;
-typedef struct rscs_servo rscs_servo_t; //Структура ещё не тип
+//Инициализация n сервомашинок
+void rscs_servo_init(int n);
 
-// идентификатор пина, на который можно подключить сервомашинку
-typedef enum
-{
-	RSCS_SERVO_ID_TIM1_A,
-	RSCS_SERVO_ID_TIM1_B
-} rscs_servo_id_t;
+//Инициализация таймера, !!!ВАЖНО!!! запускать после инициализации сервомашинок
+void rscs_servo_timer_init(void);
 
-// Инициализация сервомашинки, принимающая перечесление ключей rscs_servo_id_t
-// задающих возможную к запуску сервомашинку
-rscs_servo_t * rscs_servo_init(rscs_servo_id_t id);
+//Установка угла n-ой сервомашинке
+void rscs_servo_set_angle(int n, int angle);
 
-// Деинициализация и освобождение ресурсов.
-void rscs_servo_deinit(rscs_servo_t * servo);
+//Установка минимальной и максимальной длинны импульса для n-ой сервомашинки - калибровка
+void rscs_servo_calibrate(int n, float min_ms, float max_ms);
 
-// Калибровка сервомашинки, принимающая дескриптор сервомашинки, продолжительности
-// импульсов, соответствующих 0 и 180 градусам
-void rscs_servo_calibrate(rscs_servo_t * servo, uint16_t min_angle_ms, uint16_t max_angle_ms);
-
-// Поворот сервомашинки, принимающий дескриптор сервомашинки и абсолютный угол в градусах
-void rscs_servi_set_degrees(rscs_servo_t * servo, uint8_t angle);
-
-
-
+//Функция для калибровки: устанавливает конкретную длину импульса для n-ой сервомашинки
+// TODO: SERVO: Привести название функции к стандартам кодирования
+void _servo_set_mcs(int n,int mcs);
 
 #endif /* SERVOFUNCTIONS_H_ */

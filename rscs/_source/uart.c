@@ -171,7 +171,7 @@ void rscs_uart_set_character_size(rscs_uart_bus_t * bus, int character_size)
 
 void rscs_uart_set_baudrate(rscs_uart_bus_t * bus, uint32_t baudrate)
 {
-	// FIXME: тут не учитывается возможность установки бита U2Xn из USCRA
+	// NOTE: тут не учитывается возможность установки бита U2Xn из USCRA
 
 	const uint16_t brr_value = (uint16_t)(F_CPU/(16.0*baudrate)-1);
 	*bus->UBRRH = brr_value / 0xFF;
@@ -243,14 +243,12 @@ void rscs_uart_write(rscs_uart_bus_t * bus, const void * dataptr, size_t datasiz
 	}
 	else {
 		// если буферизация доступна и разрешена - просто дергаем write_some
-		// пока она не запишет все что может
+		// пока она не запишет все что должен
 		size_t written = 0;
 		while(written < datasize)
 		{
 			written += rscs_uart_write_some(bus, data+written, datasize-written);
 		}
-
-		return;
 	}
 #endif
 
@@ -265,7 +263,6 @@ void rscs_uart_read(rscs_uart_bus_t * bus, void * dataptr, size_t datasize)
 	if (bus->rxbuf == NULL) {
 #endif
 		// Если буфер отключён, действуем по-старинке
-
 		for (size_t i = 0; i < datasize; i++)
 		{
 			while (0 == (*bus->UCSRA & (1 << RXC0))) {} // ждем пока в буффере что-нибудь не появится
@@ -282,7 +279,6 @@ void rscs_uart_read(rscs_uart_bus_t * bus, void * dataptr, size_t datasize)
 		{
 			readed += rscs_uart_read_some(bus, data+readed, datasize-readed);
 		}
-		return;
 	}
 #endif
 }
@@ -311,7 +307,6 @@ size_t rscs_uart_write_some(rscs_uart_bus_t * bus, const void * dataptr, size_t 
 	// вполне возможно, что эта цепь уже запущена - еще не отправлена предидущая порция
 	// так или иначе - нам достаточно просто разрешить прерывание на событие пустого выходного регистра
 	if(written) *bus->UCSRB |= (1 << UDRE0);
-	sei();
 
 	// возвращаем сколько удалось записать
 	return written;
@@ -331,7 +326,7 @@ size_t rscs_uart_read_some(rscs_uart_bus_t * bus, void * dataptr, size_t datasiz
 			break;
 
 		readed++;
-		}
+	}
 
 	return readed;
 }
@@ -339,17 +334,16 @@ size_t rscs_uart_read_some(rscs_uart_bus_t * bus, void * dataptr, size_t datasiz
 
 inline static void _do_rx_interrupt(rscs_uart_bus_t * bus)
 {
-	PORTB ^= (1<<5);
-	rscs_ringbuf_push(bus->rxbuf, * bus->UDR);
+	rscs_ringbuf_push(bus->rxbuf, *bus->UDR);
 }
 
 inline static void _do_udre_interrupt(rscs_uart_bus_t * bus)
 {
 	uint8_t tmp;
 	if(rscs_ringbuf_pop(bus->txbuf, &tmp) == RSCS_E_NONE){
-		* bus->UDR = tmp;
+		*bus->UDR = tmp;
 	}
-	else * bus->UCSRB &=  ~(1 << UDRE0);
+	else *bus->UCSRB &=  ~(1 << UDRE0);
 }
 
 

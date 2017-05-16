@@ -4,18 +4,9 @@
 #include <avr/io.h>
 
 
-
 // Шаблон файла конфигурации бибилиотеки - его следует переименовать в
-// rscs_config.h и поместить куда-то, откуда библиотека сможет его заинклюдить
+// librscs_config.h и поместить куда-то, откуда библиотека сможет его заинклюдить
 
-
-
-// ========================================================
-// Установка режима debug (отладочные сообщения и т.д.)
-// Для включения раскомментируйте
-// ========================================================
-
-//#define RSCS_DEBUGMODE 1
 
 // ========================================================
 // настройки GPS
@@ -26,17 +17,6 @@
 #define RSCS_GPS_UART_BAUD_RATE (9600)
 #define RSCS_GPS_UART_STOP_BITS (1)
 #define RSCS_GPS_UART_PARITY (RSCS_UART_PARITY_NONE)
-
-
-// ========================================================
-// Перечисление интерфейсов для возможности выбора там, где это надо
-// ========================================================
-enum rscs_enum_ifaces {
-	RSCS_IF_UART,
-	RSCS_IF_I2C,
-	RSCS_IF_SPI,
-};
-
 
 
 // ========================================================
@@ -79,7 +59,7 @@ enum rscs_enum_ifaces {
 // Длительность такта ожидания Таймаута на I2C операции (в микросекундах)
 #define RSCS_I2C_TIMEOUT_US		(100)
 // Количетво тактов ожидания таймаута на I2C операции
-#define RSCS_I2C_TIMEOUT_CYCLES	(5)
+#define RSCS_I2C_TIMEOUT_CYCLES	(10)
 
 
 
@@ -114,13 +94,10 @@ enum rscs_enum_ifaces {
 // Настройки зависят от микроконтроллера - это пины, на которые выведены каналы захвата-сравнения таймера 1
 #ifdef __AVR_ATmega328P__
 
-#define RSCS_SERVO_TIM1_A_REG_DDR	(DDRB)
-#define RSCS_SERVO_TIM1_A_PIN_MASK	(1 << 1)
-
-#define RSCS_SERVO_TIM1_B_REG_DDR	(DDRB)
-#define RSCS_SERVO_TIM1_B_PIN_MASK	(1 << 2)
-
 #elif defined __AVR_ATmega128__
+
+#define RSCS_SERVO_PORT (PORTA)
+#define RSCS_SERVO_PORT_DDR (DDRA)
 // TODO: Посмотреть в даташите
 #endif
 
@@ -137,46 +114,22 @@ enum rscs_enum_ifaces {
 
 
 // ========================================================
-// Настройки модуля BMP280
-// ========================================================
-//Выбор интерфейса обмена (SPI или I2C)
-#define RSCS_BMP280_IF SPI
-
-#if RSCS_BMP280_IF == SPI
-// Настройки пина CS
-#define RSCS_BMP280_CSDDR DDRB
-#define RSCS_BMP280_CSPORT PORTB
-#define RSCS_BMP280_CSPIN 4
-// Частота обмена в килогерцах
-#define RSCS_BMP280_SPI_FREQ_kHz 64
-
-#endif //RSCS_BMP280_IF == SPI
-
-
-
-// ========================================================
-// Настройки модуля BMP280
-// ========================================================
-// Настройка пина CS
-#define ADXL345_CS_DDR			DDRB	// регистр DDR порта, на котором расположен CS пин
-#define ADXL345_CS_PORT			PORTB	// регистр PORT порта, на котором расположен CS пин
-#define ADXL345_CS_PIN			4		// номер пина CS в порту
-
-
-
-// ========================================================
 // Настройки дебажных макросов
 // ========================================================
+// Установка режима debug (отладочные сообщения и т.д.)
+// Для включения раскомментируйте
+//#define RSCS_DEBUGMODE 1
+
 #ifdef RSCS_DEBUGMODE
 
-#define RSCS_DEBUG_INIT(UART) stdin = stdout = rscs_make_uart_stream(UART); //инициализация дебага, принимает rscs_uart_bus_t *
-
-#define RSCS_DEBUG printf //предполагается писать этот макрос вместо дебажного printf
+ //инициализация дебага, принимает rscs_uart_bus_t * в который будет выводится дебажная информация
+#define RSCS_DEBUG_INIT(UART) stdin = stdout = rscs_make_uart_stream(UART);
+//предполагается писать этот макрос вместо дебажного printf
+#define RSCS_DEBUG printf 
 
 #else
 
 #define RSCS_DEBUG_INIT(UART) (void) UART;
-
 #define RSCS_DEBUG (void) //и в случае отключения дебага просто не делать ничего
 
 #endif //#ifdef RSCS_DEBUGMODE

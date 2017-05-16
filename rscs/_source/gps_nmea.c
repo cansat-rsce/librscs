@@ -154,6 +154,7 @@ again:
 		}
 		else
 			return RSCS_E_BUSY;
+			/* no break */
 
 		// брейк опущен сознательно
 	case GPS_STATE_ACCUMULATE:

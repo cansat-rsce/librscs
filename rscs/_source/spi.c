@@ -1,8 +1,8 @@
-#include "librscs_config.h"
+#include <stdlib.h>
 
+#include "librscs_config.h"
 #include "../spi.h"
 
-#include <stdlib.h>
 
 // для удобства - локальная инлайновая функция
 inline static uint8_t _spi_do_inline(uint8_t value)
@@ -23,7 +23,7 @@ void rscs_spi_init(void)
 	/*разрешение spi,старший бит вперед,мастер, режим 0*/
 	SPCR = (1 << SPE) | (1 << MSTR);
 
-	rscs_spi_set_clk(63);
+	rscs_spi_set_clk(1000);
 }
 
 

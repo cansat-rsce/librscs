@@ -67,7 +67,7 @@ typedef enum {
 
 //! Режим работы АЦП - непрерывный или одиночный
 typedef enum {
-	RSCS_ADC_MODE_SINGLE 	= 0, 		//!< Одиночный
+	RSCS_ADC_MODE_SINGLE 	= 0, 	//!< Одиночный
 	RSCS_ADC_MODE_CONTINIOUS= 1,	//!< Непрерывный
 } rscs_adc_mode_t;
 

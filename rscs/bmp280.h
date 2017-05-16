@@ -2,6 +2,7 @@
 #define BMP280_H_
 
 #include "error.h"
+#include "i2c.h"
 
 //Адреса регистров устройства
 #define RSCS_BMP280_REG_CALVAL_START 0x88
@@ -19,6 +20,12 @@
 
 //Правильное содержимое регистра ID
 #define RSCS_BMP280_IDCODE 0x58
+
+//Возможные адреса на I2C
+typedef enum {
+	RSCS_BMP280_I2C_ADDR_HIGH 	= 0x77,
+	RSCS_BMP280_I2C_ADDR_LOW 	= 0x76,
+} rscs_bmp280_addr_t;
 
 //Количество измерений на один результат. Выставляется отдельно для термометра и барометра
 typedef enum {
@@ -70,6 +77,29 @@ typedef struct {
 
 /*Параметры датчика. Все поля заполняются пользователем в самой структуре
  *перед вызовом rscs_bmp280_init() */
+/* Рекомендуемые параметры
+ * ===================================================================
+ * |     Use case       |  Mode  | osrs_p | osrs_t | filter | timing |
+ * ===================================================================
+ * |  Handheld device   | Normal |   x16  |   x2   |    4   | 62.5ms |
+ * |     (low-power)    |        |        |        |        |        |
+ * -------------------------------------------------------------------
+ * |  Handheld device   | Normal |   x4   |   x1   |   16   |  0.5ms |
+ * |      (dynamic)     |        |        |        |        |        |
+ * -------------------------------------------------------------------
+ * | Weather monitoring | Forced |   x1   |   x1   |   Off  |  1/min |
+ * |   (lowest power)   |        |        |        |        |        |
+ * -------------------------------------------------------------------
+ * |   Elevator/floor   | Normal |   x4   |   x1   |    4   |  125ms |
+ * |  change detection  |        |        |        |        |        |
+ * -------------------------------------------------------------------
+ * |   Drop detection   | Normal |   x2   |   x1   |   Off  |  0.5ms |
+ * -------------------------------------------------------------------
+ * |  Indoor navigation | Normal |   x16  |   x2   |   16   |  0.5ms |
+ * ===================================================================
+ * osrs_t - количество измерений на один результат для температуры.
+ * osrs_p - количество измерений на один результат для давления.
+ * */
 typedef struct {
 	// Режим префильтрации измерений давления
 	rscs_bmp280_oversampling_t pressure_oversampling;
@@ -87,7 +117,9 @@ typedef struct rscs_bmp280_descriptor rscs_bmp280_descriptor_t;
 
 // Создание дескриптора датчика
 // Не инициализирует сам датчик.
-rscs_bmp280_descriptor_t * rscs_bmp280_init();
+// Вызывайте только одну ф-ю в зависимости от нужного интерфейса
+// rscs_bmp280_descriptor_t * rscs_bmp280_initspi(); /* не реализовано*/
+rscs_bmp280_descriptor_t * rscs_bmp280_initi2c(rscs_bmp280_addr_t addr);
 
 // Освобождение дескритора датчика
 void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr);
@@ -103,7 +135,7 @@ rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_par
 const rscs_bmp280_parameters_t * rscs_bmp280_get_config(rscs_bmp280_descriptor_t * descr);
 
 //Отправляет датчику и сохраняет локально новые настройки params
-rscs_e rscs_bmp280_set_config(rscs_bmp280_descriptor_t * descr, rscs_bmp280_parameters_t * params);
+rscs_e rscs_bmp280_set_config(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_parameters_t * params);
 
 // Возвращает указатель на значения калибровоных коэффициентов датчика
 /*  Указатель действителен до тех пор, пока не будет
