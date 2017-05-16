@@ -176,9 +176,7 @@ rscs_adxl345_t * rscs_adxl345_initi2c(rscs_i2c_addr_t addr) {
 
 	GOTO_END_IF_ERROR(rscs_adxl345_setRegisterValue(retval, RSCS_ADXL345_DATA_FORMAT,
 			retval->range			// диапазон
-			| RSCS_ADXL345_FULL_RES	// FULL_RES = 0 (разрешение 10 бит для любого диапазона)
-			| 0 					// JUSTIFY = 0 (выравнивание бит данных по правому краю)
-			| 0 					// интерфейс SPI-3pin или SPI-4pin. FIXME: ADXL: Что это значит?
+			| RSCS_ADXL345_FULL_RES	// FULL_RES = 1 (для всех диапазонов использовать максимальное разрешение 4 mg/lsb)
 	));
 
 	//rscs_adxl345_setRegisterValue(retval, ADXL345_INT_ENABLE,		ADXL345_INT_ENABLE_DATA);	//смотри librscs_config.h
@@ -217,7 +215,8 @@ rscs_e rscs_adxl345_set_range(rscs_adxl345_t * device, rscs_adxl345_range_t rang
 	uint8_t data = 0;
 
 	GOTO_END_IF_ERROR(rscs_adxl345_getRegisterValue(device, RSCS_ADXL345_DATA_FORMAT, &data));
-	data = (data & 0x3) | RSCS_ADXL345_RANGE(range);	//очищаем 2 младших бита регистра BW_RATE и записываем новое значение
+	data &= ~( (1 << 1) | 1 );			//очищаем 2 младших бита регистра BW_RATE
+	data |= RSCS_ADXL345_RANGE(range);	//и записываем новое значение
 	GOTO_END_IF_ERROR(rscs_adxl345_setRegisterValue(device, RSCS_ADXL345_DATA_FORMAT, data));
 
 	device->range = range;
@@ -234,7 +233,8 @@ rscs_e rscs_adxl345_set_rate(rscs_adxl345_t * device, rscs_adxl345_rate_t rate)
 	uint8_t data = 0;
 
 	GOTO_END_IF_ERROR(rscs_adxl345_getRegisterValue(device, RSCS_ADXL345_BW_RATE, &data));
-	data = (data & 0xF) | RSCS_ADXL345_RATE(rate);	//очищаем 4 младших бита регистра BW_RATE и записываем новое значение
+	data &= ~(0xF);						//очищаем 4 младших бита регистра BW_RATE
+	data |= RSCS_ADXL345_RATE(rate);	//и записываем новое значение
 	GOTO_END_IF_ERROR(rscs_adxl345_setRegisterValue(device, RSCS_ADXL345_BW_RATE, data));
 
 end:
