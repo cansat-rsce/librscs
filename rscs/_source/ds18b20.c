@@ -1,10 +1,10 @@
-#include "../ds18b20.h"
-
 #include <stdlib.h>
 #include <util/atomic.h>
 
-#include <rscs/onewire.h>
-#include <rscs/crc.h>
+#include "../onewire.h"
+#include "../crc.h"
+#include "../ds18b20.h"
+
 
 /* Эта команда начинает единственное температурное преобразование.
  * По окончании данные сохраняются 2-байтовом температурном регистре,
@@ -18,11 +18,13 @@
  */
 #define RSCS_DS18B20_READ_SCRATCHPAD 0xBE
 
+
 // дескриптор датчика
 struct rscs_ds18b20_t
 {
 	uint64_t uid; // его уникальный идентификатор
 };
+
 
 rscs_ds18b20_t * rscs_ds18b20_init(uint64_t sensor_uid)
 {
@@ -38,11 +40,13 @@ rscs_ds18b20_t * rscs_ds18b20_init(uint64_t sensor_uid)
 	return retval;
 }
 
+
 void rscs_ds18b20_deinit(rscs_ds18b20_t * sensor)
 {
 	// просто освобождаем память дескриптора
 	free(sensor);
 }
+
 
 rscs_e rscs_ds18b20_start_conversion(rscs_ds18b20_t * sensor)
 {
@@ -98,6 +102,7 @@ rscs_e rscs_ds18b20_read_temperature(rscs_ds18b20_t * sensor, int16_t * value_bu
 	}
 	return error;
 }
+
 
 float rscs_ds18b20_count_temperature(rscs_ds18b20_t * sensor, int16_t raw_value){
 	return raw_value / 16.0f;

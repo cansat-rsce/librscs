@@ -28,6 +28,7 @@ struct rscs_bmp280_descriptor {
 //Макрос для возможности обработки ошибок
 #define OPERATION(OP) error = OP; if(error != RSCS_E_NONE) goto end;
 
+
 static rscs_e _read_reg_i2c(rscs_bmp280_descriptor_t * descr, uint8_t reg_addr, void * buffer, size_t buffer_size)
 {
 	rscs_e error = RSCS_E_NONE;
@@ -68,9 +69,11 @@ rscs_bmp280_descriptor_t * rscs_bmp280_initi2c(rscs_bmp280_addr_t addr){
 	return pointer;
 }
 
+
 void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr){
 	free(descr);
 }
+
 
 rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_parameters_t * params){
 	rscs_e error = RSCS_E_NONE;
@@ -119,9 +122,11 @@ end:
 	return error;
 }
 
+
 const rscs_bmp280_parameters_t * rscs_bmp280_get_config(rscs_bmp280_descriptor_t * descr){
 	return &descr->parameters;
 }
+
 
 rscs_e rscs_bmp280_set_config(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_parameters_t * params) {
 	rscs_e error = RSCS_E_NONE;
@@ -140,9 +145,11 @@ end:
 	return error;
 }
 
+
 const rscs_bmp280_calibration_values_t * rscs_bmp280_get_calibration_values(rscs_bmp280_descriptor_t * descr){
 	return &descr->calibration_values;
 }
+
 
 rscs_e rscs_bmp280_changemode(rscs_bmp280_descriptor_t * descr, rscs_bmp280_mode_t mode){
 	rscs_e error = RSCS_E_NONE;
@@ -157,6 +164,7 @@ end:
 	return error;
 }
 
+
 rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * descr, int32_t * rawpress, int32_t * rawtemp){
 	rscs_e error = RSCS_E_NONE;
 	uint8_t tmp[6];
@@ -170,6 +178,7 @@ end:
 	return error;
 }
 
+
 uint8_t rscs_bmp280_read_status(rscs_bmp280_descriptor_t * descr) {
 	rscs_e error = RSCS_E_NONE;
 	uint8_t status = 255;
@@ -179,6 +188,7 @@ end:
 	RSCS_DEBUG("BMP280: READ: returning %d\n", error);
 	return status;
 }
+
 
 rscs_e rscs_bmp280_calculate(const rscs_bmp280_calibration_values_t * calvals , int32_t rawpress, int32_t rawtemp, int32_t * press_p, int32_t * temp_p) {
 

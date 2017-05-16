@@ -1,8 +1,8 @@
-#include "librscs_config.h"
+#include <stdlib.h>
 
+#include "librscs_config.h"
 #include "../spi.h"
 
-#include <stdlib.h>
 
 // для удобства - локальная инлайновая функция
 inline static uint8_t _spi_do_inline(uint8_t value)

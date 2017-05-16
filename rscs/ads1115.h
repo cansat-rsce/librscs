@@ -13,13 +13,6 @@
 struct rscs_ads1115_t;
 typedef struct rscs_ads1115_t rscs_ads1115_t;
 
-#define RSCS_ADS1115_MV_PER_PARROT_6DOT144 0.1875f
-#define RSCS_ADS1115_MV_PER_PARROT_4DOT096 0.125f
-#define RSCS_ADS1115_MV_PER_PARROT_2DOT048 0.0625f
-#define RSCS_ADS1115_MV_PER_PARROT_1DOT024 0.03125f
-#define RSCS_ADS1115_MV_PER_PARROT_0DOT512 0.015625f
-#define RSCS_ADS1115_MV_PER_PARROT_0DOT256 0.007813f
-
 //Перечисление режимов измерения
 typedef enum {
 	RSCS_ADS1115_CHANNEL_0			= 4, //Волшебные числа - то, что надо записать в регистр
@@ -63,7 +56,7 @@ typedef enum {
 
 // Инициализация датчика.
 /* Аргумент - семибитный адрес устройства на I2C шине, который задается перемычками */
-rscs_ads1115_t * rscs_ads1115_init(i2c_addr_t addr);
+rscs_ads1115_t * rscs_ads1115_init(rscs_i2c_addr_t addr);
 
 // Деинициализация и освобождение дескритора
 void rscs_ads1115_deinit(rscs_ads1115_t * device);
@@ -100,6 +93,6 @@ rscs_e rscs_ads1115_wait_result(rscs_ads1115_t * device);
 // Перевод сырых значений в милливольты
 float rscs_ads1115_convert(rscs_ads1115_t * device, int16_t rawdata);
 
-//TODO в будущем возможна реализация функциональности компаратора
+//TODO: ADS1115: в будущем возможна реализация функциональности компаратора
 
 #endif /* ADS1115_H_ */
