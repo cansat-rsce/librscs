@@ -72,6 +72,9 @@ rscs_e rscs_adxl345_getRegisterValue(rscs_adxl345_t * device, uint8_t registerAd
 	- addr - адрес устройства на шине. Зависит от значения на ножке акселерометра ALT ADDRESS */
 rscs_adxl345_t * rscs_adxl345_initi2c(rscs_i2c_addr_t addr);
 
+// первичная настройка (обязательна к использованию сразу после rscs_adxl345_initi2c())
+rscs_e rscs_adxl345_startup(rscs_adxl345_t * adxl);
+
 // освобождение дескриптора
 void rscs_adxl345_deinit(rscs_adxl345_t * device);
 

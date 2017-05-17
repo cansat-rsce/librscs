@@ -162,39 +162,42 @@ rscs_adxl345_t * rscs_adxl345_initi2c(rscs_i2c_addr_t addr) {
 	retval->addr = addr;
 	retval->range = RSCS_ADXL345_RANGE_2G;		//диапазон 2g (по умолчанию)
 
+	return retval;
+}
+
+
+rscs_e rscs_adxl345_startup(rscs_adxl345_t * adxl) {
 	uint8_t devid = 0;
 	rscs_e error = RSCS_E_NONE;
-	error = rscs_adxl345_getRegisterValue(retval, 0x00, &devid);
+	GOTO_END_IF_ERROR(rscs_adxl345_getRegisterValue(adxl, 0x00, &devid))
+
+	if(devid !=  229)  {
+		return RSCS_E_INVRESP;
+	}
 
 	//смещение по осям XYZ равно 0 (по умолчанию)
-	GOTO_END_IF_ERROR(rscs_adxl345_setRegisterValue(retval, RSCS_ADXL345_OFSX, 0));
-	GOTO_END_IF_ERROR(rscs_adxl345_setRegisterValue(retval, RSCS_ADXL345_OFSY, 0));
-	GOTO_END_IF_ERROR(rscs_adxl345_setRegisterValue(retval, RSCS_ADXL345_OFSZ, 0));
+	GOTO_END_IF_ERROR(rscs_adxl345_setRegisterValue(adxl, RSCS_ADXL345_OFSX, 0));
+	GOTO_END_IF_ERROR(rscs_adxl345_setRegisterValue(adxl, RSCS_ADXL345_OFSY, 0));
+	GOTO_END_IF_ERROR(rscs_adxl345_setRegisterValue(adxl, RSCS_ADXL345_OFSZ, 0));
 	//LOW_POWER off, 100Гц (по умолчанию)
-	GOTO_END_IF_ERROR(rscs_adxl345_setRegisterValue(retval, RSCS_ADXL345_BW_RATE,
+	GOTO_END_IF_ERROR(rscs_adxl345_setRegisterValue(adxl, RSCS_ADXL345_BW_RATE,
 			RSCS_ADXL345_RATE_100HZ));
 
-	GOTO_END_IF_ERROR(rscs_adxl345_setRegisterValue(retval, RSCS_ADXL345_DATA_FORMAT,
-			retval->range			// диапазон
+	GOTO_END_IF_ERROR(rscs_adxl345_setRegisterValue(adxl, RSCS_ADXL345_DATA_FORMAT,
+			adxl->range			// диапазон
 			| RSCS_ADXL345_FULL_RES	// FULL_RES = 1 (для всех диапазонов использовать максимальное разрешение 4 mg/lsb)
 	));
 
-	//rscs_adxl345_setRegisterValue(retval, ADXL345_INT_ENABLE,		ADXL345_INT_ENABLE_DATA);	//смотри librscs_config.h
-	//rscs_adxl345_setRegisterValue(retval, ADXL345_INT_MAP,		ADXL345_INT_MAP_DA(retval->interface << 6)TA);		//смотри librscs_config.h
-	//rscs_adxl345_setRegisterValue(retval, ADXL345_FIFO_CTL,		ADXL345_FIFO_CTL_DATA);		//смотри librscs_config.h
+	//rscs_adxl345_setRegisterValue(adxl, ADXL345_INT_ENABLE,		ADXL345_INT_ENABLE_DATA);	//смотри librscs_config.h
+	//rscs_adxl345_setRegisterValue(adxl, ADXL345_INT_MAP,		ADXL345_INT_MAP_DA(retval->interface << 6)TA);		//смотри librscs_config.h
+	//rscs_adxl345_setRegisterValue(adxl, ADXL345_FIFO_CTL,		ADXL345_FIFO_CTL_DATA);		//смотри librscs_config.h
 
 	//переводит акселерометр из режима ожидания в режим измерения
-	GOTO_END_IF_ERROR(rscs_adxl345_setRegisterValue(retval, RSCS_ADXL345_POWER_CTL,	RSCS_ADXL345_PCTL_MEASURE));
+	GOTO_END_IF_ERROR(rscs_adxl345_setRegisterValue(adxl, RSCS_ADXL345_POWER_CTL,	RSCS_ADXL345_PCTL_MEASURE));
 
 end:
-	if (error != RSCS_E_NONE)
-	{
-		if (retval)
-			free(retval);
-		return NULL;
-	}
 
-	return retval;
+	return error;
 }
 
 
