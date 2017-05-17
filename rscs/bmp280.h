@@ -118,7 +118,7 @@ typedef struct rscs_bmp280_descriptor rscs_bmp280_descriptor_t;
 // Создание дескриптора датчика
 // Не инициализирует сам датчик.
 // Вызывайте только одну ф-ю в зависимости от нужного интерфейса
-rscs_bmp280_descriptor_t * rscs_bmp280_initspi();
+// rscs_bmp280_descriptor_t * rscs_bmp280_initspi(); /* не реализовано*/
 rscs_bmp280_descriptor_t * rscs_bmp280_initi2c(rscs_bmp280_addr_t addr);
 
 // Освобождение дескритора датчика
@@ -135,7 +135,7 @@ rscs_e rscs_bmp280_setup(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_par
 const rscs_bmp280_parameters_t * rscs_bmp280_get_config(rscs_bmp280_descriptor_t * descr);
 
 //Отправляет датчику и сохраняет локально новые настройки params
-rscs_e rscs_bmp280_set_config(rscs_bmp280_descriptor_t * descr, rscs_bmp280_parameters_t * params);
+rscs_e rscs_bmp280_set_config(rscs_bmp280_descriptor_t * descr, const rscs_bmp280_parameters_t * params);
 
 // Возвращает указатель на значения калибровоных коэффициентов датчика
 /*  Указатель действителен до тех пор, пока не будет

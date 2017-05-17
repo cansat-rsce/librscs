@@ -5,14 +5,12 @@
  *      Author: developer
  */
 
-#include "../tsl2561.h"
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
-
-#include <stdio.h>
 #include <stdlib.h>
 
+#include "../tsl2561.h"
 #include "../i2c.h"
 
 
@@ -92,11 +90,10 @@ int tsl2561_NACK = 1;
 #define CHSCALE_TINT0      0x7517 // 322/11 * 2^CH_SCALE
 #define CHSCALE_TINT1      0x0fe7 // 322/81 * 2^CH_SCALE
 
-static rscs_e error;
 
 static rscs_e _write_reg8(rscs_tsl2561_t * self, uint8_t reg_addr, uint8_t reg_value)
 {
-	error = rscs_i2c_start();
+	rscs_e error = rscs_i2c_start();
 	if (error != RSCS_E_NONE)
 		return error;
 
@@ -112,7 +109,7 @@ end:
 	return error;
 }
 
-// возвращает дескриптор с адресом, который укажет пользователь
+
 rscs_tsl2561_t * rscs_tsl2561_init(rscs_tsl2561_addr_t addr)
 {
 	rscs_tsl2561_t * self = (rscs_tsl2561_t *)malloc(sizeof(rscs_tsl2561_t ));
@@ -128,7 +125,6 @@ rscs_tsl2561_t * rscs_tsl2561_init(rscs_tsl2561_addr_t addr)
 rscs_e rscs_tsl2561_setup(rscs_tsl2561_t * self)
 {
 	rscs_e error;
-	// начинаем i2c транзакцию
 	GOTO_END_IF_ERROR(_write_reg8(self, CONTROL_REG_ADDR, 0x03)); // 0b00000011 // младшие биты 11 означают, что питание ВКЛ
 	GOTO_END_IF_ERROR(_write_reg8(self, TIMING_REG_ADDR, 0x02)); // 0b00000010 // младшие биты 10 означают, что время интеграции 402мс
 	GOTO_END_IF_ERROR(_write_reg8(self, INTERRUPT_REG_ADDR, 0x00)); // 0b00000000 // 5 и 4 биты отключают прерывания
@@ -139,14 +135,14 @@ end:
 
 void rscs_tsl2561_deinit(rscs_tsl2561_t * self)
 {
-	// TODO: Выключить TSL, чтобы он ничего не мерял почем зря
+	// TODO: TSL2561: Выключить TSL, чтобы он ничего не мерял почем зря
 	free(self);
 }
 
 
 rscs_e rscs_tsl2561_read(rscs_tsl2561_t * self, uint16_t * sensor_data0, uint16_t * sensor_data1)
 {
-    error = rscs_i2c_start();
+	rscs_e error = rscs_i2c_start();
     if (error != RSCS_E_NONE)
         return error;
 

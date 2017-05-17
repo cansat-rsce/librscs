@@ -1,15 +1,13 @@
-#include <avr/io.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
+
+#include <avr/io.h>
 #include <util/delay.h>
 #include <util/atomic.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <stdio.h>
 
 #include "librscs_config.h"
 #include "../error.h"
-
 #include "../dht22.h"
 
 struct rscs_dht22_t {
@@ -139,7 +137,6 @@ inline static int _read_bit(rscs_dht22_t * dht)
 		return RSCS_E_TIMEOUT;
 
 	if(i > dht->signal_time) {
-		//printf("111111111`11111\n");
 		return 1;
 	}
 	else return 0;
