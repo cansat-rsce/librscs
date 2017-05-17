@@ -168,7 +168,10 @@ inline static rscs_e _read_byte(rscs_dht22_t * dht){
 rscs_e rscs_dht22_read(rscs_dht22_t * dht, uint16_t * humidity, int16_t * temp)
 {
 	rscs_e error = RSCS_E_NONE;
-	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+#ifdef RSCS_DHT22_ATOMIC
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+#endif
+	{
 		rscs_e reset_status = _reset(dht);
 		if (reset_status != RSCS_E_NONE)
 			error = reset_status;
