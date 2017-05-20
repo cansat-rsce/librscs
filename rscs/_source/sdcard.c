@@ -49,6 +49,7 @@ rscs_sdcard_t * rscs_sd_init(volatile uint8_t * cs_ddr_reg,volatile uint8_t * cs
 	self->cs_ddr = cs_ddr_reg;
 	self->cs_port = cs_port_reg;
 	self->cs_pin_mask = cs_pin_mask;
+	self->timeout = 4000;
 
 	// настраиваем cs пин на вывод
 	*self->cs_ddr |= (self->cs_pin_mask);
@@ -58,6 +59,9 @@ rscs_sdcard_t * rscs_sd_init(volatile uint8_t * cs_ddr_reg,volatile uint8_t * cs
 	return self;
 }
 
+void rscs_sd_set_timeout(rscs_sdcard_t * self, uint32_t timeout_us){
+	self->timeout = timeout_us;
+}
 
 void rscs_sd_deinit(rscs_sdcard_t * self)
 {
