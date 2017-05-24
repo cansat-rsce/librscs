@@ -88,9 +88,9 @@ void rscs_sd_spi_setup_slow(void)
 void rscs_sd_cs(rscs_sdcard_t * self, bool state)
 {
 	if (state)
-		*self->cs_port |= self->cs_pin_mask;
-	else
 		*self->cs_port &= ~self->cs_pin_mask;
+	else
+		*self->cs_port |= self->cs_pin_mask;
 }
 
 
@@ -163,7 +163,7 @@ rscs_e rscs_sd_cmd(rscs_sdcard_t * self, rscs_sd_cmd_t cmd, uint32_t argument, v
 	while(1)
 	{
 		rscs_sd_read(self, first_response_byte_ptr, 1);
-		if ((*first_response_byte_ptr & 0x80) != 0) // первый бит любого ответа должен быть равен 0
+		if ((*first_response_byte_ptr & 0x80) == 0) // первый бит любого ответа должен быть равен 0
 			break;
 
 		// пока ответа нет - шина держится в единице (0xFF)
