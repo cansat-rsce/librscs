@@ -49,6 +49,7 @@ rscs_sdcard_t * rscs_sd_init(volatile uint8_t * cs_ddr_reg,volatile uint8_t * cs
 	self->cs_ddr = cs_ddr_reg;
 	self->cs_port = cs_port_reg;
 	self->cs_pin_mask = cs_pin_mask;
+	self->timeout = 4000;
 
 	// настраиваем cs пин на вывод
 	*self->cs_ddr |= (self->cs_pin_mask);
@@ -58,6 +59,9 @@ rscs_sdcard_t * rscs_sd_init(volatile uint8_t * cs_ddr_reg,volatile uint8_t * cs
 	return self;
 }
 
+void rscs_sd_set_timeout(rscs_sdcard_t * self, uint32_t timeout_us){
+	self->timeout = timeout_us;
+}
 
 void rscs_sd_deinit(rscs_sdcard_t * self)
 {
@@ -84,9 +88,9 @@ void rscs_sd_spi_setup_slow(void)
 void rscs_sd_cs(rscs_sdcard_t * self, bool state)
 {
 	if (state)
-		*self->cs_port |= self->cs_pin_mask;
-	else
 		*self->cs_port &= ~self->cs_pin_mask;
+	else
+		*self->cs_port |= self->cs_pin_mask;
 }
 
 
@@ -159,7 +163,7 @@ rscs_e rscs_sd_cmd(rscs_sdcard_t * self, rscs_sd_cmd_t cmd, uint32_t argument, v
 	while(1)
 	{
 		rscs_sd_read(self, first_response_byte_ptr, 1);
-		if ((*first_response_byte_ptr & 0x80) != 0) // первый бит любого ответа должен быть равен 0
+		if ((*first_response_byte_ptr & 0x80) == 0) // первый бит любого ответа должен быть равен 0
 			break;
 
 		// пока ответа нет - шина держится в единице (0xFF)
