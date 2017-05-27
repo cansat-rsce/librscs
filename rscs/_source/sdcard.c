@@ -185,13 +185,10 @@ rscs_e rscs_sd_cmd(rscs_sdcard_t * self, rscs_sd_cmd_t cmd, uint32_t argument, v
 
 rscs_e rscs_sd_wait_busy(rscs_sdcard_t * self)
 {
+	uint8_t buffer;
 	uint32_t timespent = 0;
-	while(1)
-	{
-		uint8_t buffer;
+	do {
 		rscs_sd_read(self, &buffer, 1);
-		if (0x00 == buffer)
-			break;
 
 		_delay_us(1);
 		if (self->timeout)
@@ -200,7 +197,7 @@ rscs_e rscs_sd_wait_busy(rscs_sdcard_t * self)
 			if (timespent > self->timeout)
 				return RSCS_E_TIMEOUT;
 		}
-	}
+	}while(0x00 == buffer);
 
 	return RSCS_E_NONE;
 }
@@ -218,6 +215,8 @@ rscs_e rscs_sd_startup(rscs_sdcard_t * self)
 		rscs_sd_write(self, &dummy, 1);
 
 	// Переключаем SPI на высокую скорость
+	rscs_sd_spi_setup();
+
 	rscs_sd_cs(self, true);
 	// отправляем карте команду CMDO уже при включенном CS
 	uint8_t r1_resp = 0x00;
