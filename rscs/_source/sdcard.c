@@ -49,6 +49,7 @@ rscs_sdcard_t * rscs_sd_init(volatile uint8_t * cs_ddr_reg,volatile uint8_t * cs
 	self->cs_ddr = cs_ddr_reg;
 	self->cs_port = cs_port_reg;
 	self->cs_pin_mask = cs_pin_mask;
+	self->timeout = 4000;
 
 	// настраиваем cs пин на вывод
 	*self->cs_ddr |= (self->cs_pin_mask);
@@ -58,6 +59,9 @@ rscs_sdcard_t * rscs_sd_init(volatile uint8_t * cs_ddr_reg,volatile uint8_t * cs
 	return self;
 }
 
+void rscs_sd_set_timeout(rscs_sdcard_t * self, uint32_t timeout_us){
+	self->timeout = timeout_us;
+}
 
 void rscs_sd_deinit(rscs_sdcard_t * self)
 {
@@ -84,9 +88,9 @@ void rscs_sd_spi_setup_slow(void)
 void rscs_sd_cs(rscs_sdcard_t * self, bool state)
 {
 	if (state)
-		*self->cs_port |= self->cs_pin_mask;
-	else
 		*self->cs_port &= ~self->cs_pin_mask;
+	else
+		*self->cs_port |= self->cs_pin_mask;
 }
 
 
@@ -159,7 +163,7 @@ rscs_e rscs_sd_cmd(rscs_sdcard_t * self, rscs_sd_cmd_t cmd, uint32_t argument, v
 	while(1)
 	{
 		rscs_sd_read(self, first_response_byte_ptr, 1);
-		if ((*first_response_byte_ptr & 0x80) != 0) // первый бит любого ответа должен быть равен 0
+		if ((*first_response_byte_ptr & 0x80) == 0) // первый бит любого ответа должен быть равен 0
 			break;
 
 		// пока ответа нет - шина держится в единице (0xFF)
@@ -181,13 +185,10 @@ rscs_e rscs_sd_cmd(rscs_sdcard_t * self, rscs_sd_cmd_t cmd, uint32_t argument, v
 
 rscs_e rscs_sd_wait_busy(rscs_sdcard_t * self)
 {
+	uint8_t buffer;
 	uint32_t timespent = 0;
-	while(1)
-	{
-		uint8_t buffer;
+	do {
 		rscs_sd_read(self, &buffer, 1);
-		if (0x00 == buffer)
-			break;
 
 		_delay_us(1);
 		if (self->timeout)
@@ -196,7 +197,7 @@ rscs_e rscs_sd_wait_busy(rscs_sdcard_t * self)
 			if (timespent > self->timeout)
 				return RSCS_E_TIMEOUT;
 		}
-	}
+	}while(0x00 == buffer);
 
 	return RSCS_E_NONE;
 }
@@ -214,6 +215,8 @@ rscs_e rscs_sd_startup(rscs_sdcard_t * self)
 		rscs_sd_write(self, &dummy, 1);
 
 	// Переключаем SPI на высокую скорость
+	rscs_sd_spi_setup();
+
 	rscs_sd_cs(self, true);
 	// отправляем карте команду CMDO уже при включенном CS
 	uint8_t r1_resp = 0x00;
