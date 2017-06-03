@@ -1,5 +1,5 @@
-#ifndef ADXL345_H_
-#define ADXL345_H_
+#ifndef RSCS_ADXL345_H_
+#define RSCS_ADXL345_H_
 
 #include <stdint.h>
 #include <avr/io.h>	//ВРЕМЕННО
@@ -107,4 +107,4 @@ void rscs_adxl345_cast_to_G(rscs_adxl345_t * device, int16_t x, int16_t y, int16
 rscs_e rscs_adxl345_GetGXYZ(rscs_adxl345_t * device, int16_t* x, int16_t* y, int16_t* z, float* x_g, float* y_g, float* z_g);
 
 
-#endif /* ADXL345_H_ */
+#endif /* RSCS_ADXL345_H_ */

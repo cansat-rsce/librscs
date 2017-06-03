@@ -1,5 +1,5 @@
-#ifndef TIME_H_
-#define TIME_H_
+#ifndef RSCS_TIME_H_
+#define RSCS_TIME_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -23,4 +23,4 @@ void rscs_time_deinit();
 //Получение времени в миллисекундах с момента старта аппарата
 uint32_t rscs_time_get();
 
-#endif /* TIME_H_ */
+#endif /* RSCS_TIME_H_ */

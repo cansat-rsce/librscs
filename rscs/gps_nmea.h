@@ -1,7 +1,7 @@
 /* */
 
-#ifndef GPS_NMEA_H_
-#define GPS_NMEA_H_
+#ifndef RSCS_GPS_NMEA_H_
+#define RSCS_GPS_NMEA_H_
 
 #include <stdint.h>
 #include <stddef.h>
@@ -29,4 +29,4 @@ rscs_e rscs_gps_read(rscs_gps_t * gps, float * lon, float * lat, float * height,
 
 
 #endif
-#endif /* GPS_NMEA_H_ */
+#endif /* RSCS_GPS_NMEA_H_ */

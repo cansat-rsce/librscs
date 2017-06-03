@@ -1,5 +1,5 @@
-#ifndef ADC_H_
-#define ADC_H_
+#ifndef RSCS_ADC_H_
+#define RSCS_ADC_H_
 
 #include "error.h"
 #include "stdint.h"
@@ -108,4 +108,4 @@ rscs_e rscs_adc_get_result(int32_t * value_ptr);
 //Задержка до появления результатов измерения
 void rscs_adc_wait_result();
 
-#endif /* ADC_H_ */
+#endif /* RSCS_ADC_H_ */
