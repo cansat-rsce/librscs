@@ -1,5 +1,5 @@
-#ifndef DS18B20_H_
-#define DS18B20_H_
+#ifndef RSCS_DS18B20_H_
+#define RSCS_DS18B20_H_
 
 /*	Модуль-драйвер датчика температуры ds18b20
 	Даташит: http://datasheets.maximintegrated.com/en/ds/DS18B20.pdf
@@ -57,4 +57,4 @@ rscs_e rscs_ds18b20_read_temperature(rscs_ds18b20_t * sensor, int16_t * value_bu
 // Функция для конвертирования сырого значения температуры, получаемого с ds18b20, в градусы цельсия.
 float rscs_ds18b20_count_temperature(rscs_ds18b20_t * sensor, int16_t raw_value);
 
-#endif /* DS18B20_H_ */
+#endif /* RSCS_DS18B20_H_ */

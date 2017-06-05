@@ -1,7 +1,7 @@
 /* */
 
-#ifndef ADS1115_H_
-#define ADS1115_H_
+#ifndef RSCS_ADS1115_H_
+#define RSCS_ADS1115_H_
 
 #include <stdint.h>
 #include <stddef.h>
@@ -95,4 +95,4 @@ float rscs_ads1115_convert(rscs_ads1115_t * device, int16_t rawdata);
 
 //TODO: ADS1115: в будущем возможна реализация функциональности компаратора
 
-#endif /* ADS1115_H_ */
+#endif /* RSCS_ADS1115_H_ */

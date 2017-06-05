@@ -1,5 +1,5 @@
-#ifndef BMP280_H_
-#define BMP280_H_
+#ifndef RSCS_BMP280_H_
+#define RSCS_BMP280_H_
 
 #include "error.h"
 #include "i2c.h"
@@ -158,4 +158,4 @@ rscs_e rscs_bmp280_calculate(const rscs_bmp280_calibration_values_t * calvals , 
 //Прочитать регистр статуса устройства
 uint8_t rscs_bmp280_read_status(rscs_bmp280_descriptor_t * bmp);
 
-#endif /* BMP280_H_ */
+#endif /* RSCS_BMP280_H_ */

@@ -5,8 +5,8 @@
  *      Author: developer
  */
 
-#ifndef TSL2561_H_
-#define TSL2561_H_
+#ifndef RSCS_TSL2561_H_
+#define RSCS_TSL2561_H_
 
 #include "error.h"
 #include <stdint.h>
@@ -52,4 +52,4 @@ rscs_e rscs_tsl2561_read(rscs_tsl2561_t * self, uint16_t * sensor_data0, uint16_
 // Формирует полноценные люксы из отдельных показаний фотодиодов
 uint16_t rscs_tsl2561_get_lux(rscs_tsl2561_t * self, rscs_tsl2561_gain_t iGain, rscs_tsl2561_type_t iType, rscs_tsl2561_int_t tInt, unsigned int sensor_data0, unsigned int sensor_data1);
 
-#endif /* TSL2561_H_ */
+#endif /* RSCS_TSL2561_H_ */

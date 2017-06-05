@@ -5,8 +5,8 @@
  *      Author: developer
  */
 
-#ifndef RINGBUF_H_
-#define RINGBUF_H_
+#ifndef RSCS_RINGBUF_H_
+#define RSCS_RINGBUF_H_
 
 #include "error.h"
 
@@ -32,4 +32,4 @@ rscs_e rscs_ringbuf_pop(rscs_ringbuf_t * buf, uint8_t * value);
 //Узнать размер записанных данных
 size_t rscs_ringbuf_getsize(rscs_ringbuf_t * buf);
 
-#endif /* RINGBUF_H_ */
+#endif /* RSCS_RINGBUF_H_ */
