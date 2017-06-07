@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include <util/delay.h>
+#include <util/atomic.h>
 
 #include "librscs_config.h"
 
@@ -60,26 +61,38 @@ bool rscs_ow_reset(void)
 
 void rscs_ow_write_bit(bool value)
 {
-	_ow_set_bus_zero();
-	_delay_us(2);
-	if (value != 0)
+#ifdef RSCS_ONEWIRE_ATOMIC
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+#endif
 	{
+		_ow_set_bus_zero();
+		_delay_us(2);
+		if (value != 0)
+		{
+			_ow_set_bus_one();
+		}
+
+		_delay_us(60);
 		_ow_set_bus_one();
 	}
-
-	_delay_us(60);
-	_ow_set_bus_one();
 }
 
 
 bool rscs_ow_read_bit(void)
 {
-	_ow_set_bus_zero();
-	_delay_us (2);
-	_ow_set_bus_one();
-	_delay_us (20);
-	bool x = _ow_get_bus_value();
-	_delay_us(30);
+	bool x;
+#ifdef RSCS_ONEWIRE_ATOMIC
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+#endif
+	{
+		_ow_set_bus_zero();
+		_delay_us (2);
+		_ow_set_bus_one();
+		_delay_us (20);
+		x = _ow_get_bus_value();
+		_delay_us(30);
+	}
+
 	return x;
 }
 

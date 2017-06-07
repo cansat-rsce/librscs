@@ -8,32 +8,18 @@
 
 #include "error.h"
 
-//TODO: написать функцию rscs_adxl345_low_power(bool low_power)
-#define RSCS_ADXL345_BW_RATE_DATA		RSCS_ADXL345_RATE(0b1010) // LOW_POWER - OFF | 1010 - 100Гц
-
-//TODO: написать функцию, запускающую self-test
-//TODO: INT_INVERT перенести в librscs_config.h
-#define RSCS_ADXL345_DATA_FORMAT_DATA	RSCS_ADXL345_RANGE_4G // RANGE_4G - диапазон измерений +-4g, остальные параметры по умолчанию
-
-//TODO: FIFO_CTL перенести в librscs_config.h
-#define RSCS_ADXL345_FIFO_CTL_DATA		RSCS_ADXL345_FIFO_STREAM   // Режим FIFO - STREAM, TRIGGER и SAMPLES не имеют значения.
-
 /*
 	модуль работы с акселерометром ADXL375 через интерфейс I2C
 	Даташит: http://www.analog.com/media/en/technical-documentation/data-sheets/ADXL345.pdf
 	Неплохое описание на русском: http://www.russianelectronics.ru/leader-r/review/2193/doc/49907/
 */
+//TODO: ADXL: написать функцию rscs_adxl345_low_power(bool low_power)
+//TODO: ADXL: написать функцию, запускающую self-test
+
 
 // дескриптор устройства
 struct rscs_adxl345_t;
 typedef struct rscs_adxl345_t rscs_adxl345_t;
-
-// Возможные интерфейсы передачи данных
-typedef enum
-{
-	RSCS_ADXL345_SPI = 1,	//SPI
-	RSCS_ADXL345_I2C = 0,	//I2C
-} rscs_adxl345_inteface_t;
 
 
 // Возможные адреса устройства на шине
@@ -78,14 +64,16 @@ typedef enum
 	RSCS_ADXL345_RATE_3200HZ	= 0b1111,	//  3200 Герц
 } rscs_adxl345_rate_t;
 
+
 rscs_e rscs_adxl345_getRegisterValue(rscs_adxl345_t * device, uint8_t registerAddress, uint8_t * read_data);
 
 // Функции инициализации дескриптора (для разных интерфейсов)
 /*	Параметры:
 	- addr - адрес устройства на шине. Зависит от значения на ножке акселерометра ALT ADDRESS */
-rscs_adxl345_t * rscs_adxl345_initi2c(i2c_addr_t addr);
-rscs_adxl345_t * rscs_adxl345_initspi(volatile uint8_t * CS_DDR, volatile uint8_t * CS_PORT,
-										uint8_t CS_PIN);
+rscs_adxl345_t * rscs_adxl345_initi2c(rscs_i2c_addr_t addr);
+
+// первичная настройка (обязательна к использованию сразу после rscs_adxl345_initi2c())
+rscs_e rscs_adxl345_startup(rscs_adxl345_t * adxl);
 
 // освобождение дескриптора
 void rscs_adxl345_deinit(rscs_adxl345_t * device);

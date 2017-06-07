@@ -1,15 +1,13 @@
-#include <avr/io.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
+
+#include <avr/io.h>
 #include <util/delay.h>
 #include <util/atomic.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <stdio.h>
 
 #include "librscs_config.h"
 #include "../error.h"
-
 #include "../dht22.h"
 
 struct rscs_dht22_t {
@@ -139,7 +137,6 @@ inline static int _read_bit(rscs_dht22_t * dht)
 		return RSCS_E_TIMEOUT;
 
 	if(i > dht->signal_time) {
-		//printf("111111111`11111\n");
 		return 1;
 	}
 	else return 0;
@@ -171,7 +168,10 @@ inline static rscs_e _read_byte(rscs_dht22_t * dht){
 rscs_e rscs_dht22_read(rscs_dht22_t * dht, uint16_t * humidity, int16_t * temp)
 {
 	rscs_e error = RSCS_E_NONE;
-	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+#ifdef RSCS_DHT22_ATOMIC
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+#endif
+	{
 		rscs_e reset_status = _reset(dht);
 		if (reset_status != RSCS_E_NONE)
 			error = reset_status;

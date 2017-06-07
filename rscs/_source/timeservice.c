@@ -1,15 +1,14 @@
-#include "../timeservice.h"
-
 #include <stdint.h>
-#include <util/delay.h>
 #include <stdbool.h>
 
-#include "avr/io.h"
-#include "avr/interrupt.h"
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <util/delay.h>
+#include <util/atomic.h>
 
 #include "librscs_config.h"
 
-#include "../stdext/stdio.h"
+#include "../timeservice.h"
 
 bool _rscs_time_needinit = true;
 
@@ -20,12 +19,10 @@ ISR (TIMER3_COMPA_vect) {
 #elif defined __AVR_ATmega328P__
 ISR (TIMER0_COMPA_vect) {
 #endif
-	PORTB ^= (1 << 5);
 	_m_seconds++;
 }
 
 void rscs_time_init() {
-	sei();
 	if(_rscs_time_needinit) {
 		_m_seconds = 0;
 #ifdef __AVR_ATmega128__
@@ -62,8 +59,11 @@ void rscs_time_deinit() {
 }
 
 uint32_t rscs_time_get() {
-	cli();
-	uint32_t temp_ms = _m_seconds;
-	sei();
+
+	uint32_t temp_ms;
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+	{
+		temp_ms = _m_seconds;
+	}
 	return temp_ms;
 }
