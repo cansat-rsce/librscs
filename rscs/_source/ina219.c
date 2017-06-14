@@ -28,8 +28,6 @@ static rscs_e _write_reg(rscs_ina219_t * device, uint8_t reg_addr, uint16_t reg_
 	if (error != RSCS_E_NONE)
 		return error;
 
-	printf("start sent\n");
-
 	error = rscs_i2c_send_slaw(device->address, rscs_i2c_slaw_write);
 	if (error != RSCS_E_NONE)
 		goto end;
