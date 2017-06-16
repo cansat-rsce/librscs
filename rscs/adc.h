@@ -1,5 +1,5 @@
-#ifndef ADC_H_
-#define ADC_H_
+#ifndef RSCS_ADC_H_
+#define RSCS_ADC_H_
 
 #include "error.h"
 #include "stdint.h"
@@ -67,7 +67,7 @@ typedef enum {
 
 //! Режим работы АЦП - непрерывный или одиночный
 typedef enum {
-	RSCS_ADC_MODE_SINGLE 	= 0, 		//!< Одиночный
+	RSCS_ADC_MODE_SINGLE 	= 0, 	//!< Одиночный
 	RSCS_ADC_MODE_CONTINIOUS= 1,	//!< Непрерывный
 } rscs_adc_mode_t;
 
@@ -108,4 +108,4 @@ rscs_e rscs_adc_get_result(int32_t * value_ptr);
 //Задержка до появления результатов измерения
 void rscs_adc_wait_result();
 
-#endif /* ADC_H_ */
+#endif /* RSCS_ADC_H_ */

@@ -6,6 +6,8 @@
 
 #include "../gps_nmea.h"
 
+#include "../3rd_party/minmea/minmea.h"
+
 
 #ifdef RSCS_UART_USEBUFFERS // Модуль имеет смысл только с включенной буферизацией UART
 
@@ -60,71 +62,22 @@ void rscs_gps_deinit(rscs_gps_t * gps)
 	free(gps);
 }
 
-
-static int _explode(const char * str, size_t msgSize, char symbol, const char ** results,
-		size_t results_size)
-{
-	uint8_t numbersOfStr = 0;
-	for (int i = 0; i < msgSize; i++){
-		if (str[i] == symbol){
-			results[numbersOfStr] = &str[i + 1];
-			if (numbersOfStr > results_size)
-				return 0;
-			numbersOfStr++;
-		}
-	}
-	return numbersOfStr;
-}
-
 static bool _handle_message(const char * msg_signed, size_t msgSize, float * lon, float * lat,
 						    float * height, bool * hasFix)
 {
-	const uint8_t * msg = (const uint8_t *)msg_signed;
-	char chksum = msg[1]; // пропускаем нулевой символ $
+	//printf("12%s\n", msg_signed);
 
-	size_t chksumLimit = msgSize - 5; // Пропускаем *XX\r\n
-	for (size_t i = 2; i < chksumLimit; i++)
-		chksum = chksum ^ msg[i];
+	struct minmea_sentence_gga frame;
+	if( !minmea_parse_gga(&frame, msg_signed)) return false;
+	*lon = minmea_tofloat(&frame.longitude);
+	*lat = minmea_tofloat(&frame.latitude);
+	*height = minmea_tofloat(&frame.altitude);
+	*hasFix = frame.fix_quality != 0;
 
-	int expectedChksumValue;
-	if (sscanf(msg_signed + chksumLimit+1, "%X", &expectedChksumValue) == 0)
-		return false;
+	//printf("%f\n", *lon);
 
-	if (chksum != expectedChksumValue)
-		return false;
-
-	const char * results[16];
-	uint8_t numbersOfStr = _explode(msg_signed, msgSize, ',', results, sizeof(results));
-	if (numbersOfStr == 0)
-		return false;
-
-	// разбираем долготу
-	if (sscanf(results[1], "%f", lon) != 1)
-		return false;
-
-	if(*results[2] != 'N')
-		*lon *= -1;
-
-	//разбираем широту
-	if (sscanf(results[3], "%f", lat) != 1)
-		return false;
-
-	if (*results[4] != 'E')
-		*lat *= -1;
-
-	//разбираем высоту
-	if (sscanf(results[9], "%f", height) != 1)
-		return false;
-
-	//проверка качества
-	int fixQual;
-	if (sscanf(results[5], "%i", &fixQual) != 0)
-		*hasFix = false;
-		else
-		*hasFix = true;
-	return true;
+	return 1;
 }
-
 
 rscs_e rscs_gps_read(rscs_gps_t * gps, float * lon, float * lat,
 					 float * height, bool * hasFix)
@@ -154,6 +107,7 @@ again:
 		}
 		else
 			return RSCS_E_BUSY;
+			/* no break */
 
 		// брейк опущен сознательно
 	case GPS_STATE_ACCUMULATE:
@@ -185,6 +139,7 @@ again:
 				&& '\n' == gps->buffer[gps->buffer_carret-1]
 			    && '\r' == gps->buffer[gps->buffer_carret-2])
 			{
+				gps->buffer[gps->buffer_carret] = 0x00;
 				if (_handle_message(gps->buffer, gps->buffer_carret, lon, lat, height, hasFix))
 				{
 					gps->state = GPS_STATE_IDLE;

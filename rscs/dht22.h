@@ -6,8 +6,8 @@
  * Неплохое описание на русском: http://avrproject.ru/publ/kak_podkljuchit/rabota_s_datchikom_vlazhnosti_dht11_v_bascom_avr/2-1-0-72
  */
 
-#ifndef DHT022_H_
-#define DHT022_H_
+#ifndef RSCS_DHT022_H_
+#define RSCS_DHT022_H_
 
 #include <stdint.h>
 
@@ -61,4 +61,4 @@ rscs_dht22_t *  rscs_dht22_init(volatile uint8_t * PORTREG,
 rscs_e rscs_dht22_read(rscs_dht22_t * dht, uint16_t * humidity, int16_t * temp);
 
 
-#endif /* DHT022_H_ */
+#endif /* RSCS_DHT022_H_ */
