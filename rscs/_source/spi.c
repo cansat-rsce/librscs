@@ -83,16 +83,16 @@ void rscs_spi_set_pol(rscs_spi_polarity_t polarity)
 	switch(polarity)
 	{
 	case RSCS_SPI_POL_SAMPLE_RISE_SETUP_FALL:
-		SPSR |= (0 << CPOL) | (0 << CPHA);
+		SPCR |= (0 << CPOL) | (0 << CPHA);
 		break;
 	case RSCS_SPI_POL_SETUP_RISE_SAMPLE_FALL:
-		SPSR |= (0 << CPOL) | (1 << CPHA);
+		SPCR |= (0 << CPOL) | (1 << CPHA);
 		break;
 	case RSCS_SPI_POL_SAMPLE_FALL_SETUP_RISE:
-		SPSR |= (1 << CPOL) | (0 << CPHA);
+		SPCR |= (1 << CPOL) | (0 << CPHA);
 		break;
 	case RSCS_SPI_POL_SETUP_FALL_SAMPLE_RISE:
-		SPSR |= (1 << CPOL) | (1 << CPHA);
+		SPCR |= (1 << CPOL) | (1 << CPHA);
 		break;
 	default:
 		abort();
