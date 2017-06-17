@@ -44,6 +44,7 @@ static rscs_e _read_reg_spi(rscs_bmp280_descriptor_t * descr, uint8_t reg_addr,
 {
 	*descr->bus_params.spi.cs_port &= ~(descr->bus_params.spi.cs_pin_mask);
 
+	reg_addr |= (1<<7);
 	rscs_spi_write(&reg_addr,1);
 	rscs_spi_read(buffer, buffer_size, 0xFF);
 
@@ -56,6 +57,7 @@ static rscs_e _write_reg_spi(rscs_bmp280_descriptor_t * descr, uint8_t reg_addr,
 {
 	*descr->bus_params.spi.cs_port &= ~(descr->bus_params.spi.cs_pin_mask);
 
+	reg_addr &= ~(1<<7);
 	rscs_spi_write(&reg_addr,1);
 	rscs_spi_write(buffer,buffer_size);
 
@@ -120,6 +122,11 @@ rscs_bmp280_descriptor_t * rscs_bmp280_initspi(volatile uint8_t * cs_port,
 	pointer->read_reg = _read_reg_spi;
 	pointer->write_reg = _write_reg_spi;
 	*cs_ddr |= pointer->bus_params.spi.cs_pin_mask;
+
+	*pointer->bus_params.spi.cs_port &= ~(pointer->bus_params.spi.cs_pin_mask);
+	_delay_ms(10);
+	*pointer->bus_params.spi.cs_port |= (pointer->bus_params.spi.cs_pin_mask);
+
 	return pointer;
 }
 
