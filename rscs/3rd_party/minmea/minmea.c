@@ -301,7 +301,7 @@ bool minmea_scan(const char *sentence, const char *format, ...)
                     // Extra: fractional time. Saved as microseconds.
                     if (*field++ == '.') {
                         int value = 0;
-                        int scale = 1000000;
+                        int32_t scale = 1000000;
                         while (isdigit((unsigned char) *field) && scale > 1) {
                             value = (value * 10) + (*field++ - '0');
                             scale /= 10;
@@ -583,29 +583,5 @@ bool minmea_parse_vtg(struct minmea_sentence_vtg *frame, const char *sentence)
 
     return true;
 }
-/*
-int minmea_gettime(struct timespec *ts, const struct minmea_date *date, const struct minmea_time *time_)
-{
-    if (date->year == -1 || time_->hours == -1)
-        return -1;
 
-    struct tm tm;
-    memset(&tm, 0, sizeof(tm));
-    tm.tm_year = 2000 + date->year - 1900;
-    tm.tm_mon = date->month - 1;
-    tm.tm_mday = date->day;
-    tm.tm_hour = time_->hours;
-    tm.tm_min = time_->minutes;
-    tm.tm_sec = time_->seconds;
-
-    time_t timestamp = timegm(&tm); /* See README.md if your system lacks timegm(). */
-  /*  if (timestamp != -1) {
-        ts->tv_sec = timestamp;
-        ts->tv_nsec = time_->microseconds * 1000;
-        return 0;
-    } else {
-        return -1;
-    }
-}
-*/
 /* vim: set ts=4 sw=4 et: */
