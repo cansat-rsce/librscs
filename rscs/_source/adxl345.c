@@ -156,9 +156,6 @@ rscs_adxl345_t * rscs_adxl345_initi2c(rscs_i2c_addr_t addr) {
 	if (!retval)
 		return retval;
 
-	// и инициализируем
-	// TODO: ADXL: Вынести первичную инициализицию в функцию startup, чтобы оттуда можно было
-	// вернуть код ошибки
 	retval->addr = addr;
 	retval->range = RSCS_ADXL345_RANGE_2G;		//диапазон 2g (по умолчанию)
 
