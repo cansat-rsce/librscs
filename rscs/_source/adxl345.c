@@ -288,18 +288,6 @@ end:
 
 
 void rscs_adxl345_cast_to_G(rscs_adxl345_t * device, int16_t x, int16_t y, int16_t z, float * x_g, float * y_g, float * z_g) {
-	/*uint8_t  range = 1;
-
-	range = (1 << device->range);
-
-	if(x >> 9) *x_g = -(float)(!x + 1);	//если 10-й бит равен 1, то число отрицательное
-	if(x >> 9) *y_g = -(float)(!y + 1);
-	if(x >> 9) *z_g = -(float)(!z + 1);
-
-	*x_g = (*x_g) * RSCS_ADXL345_SCALE_FACTOR * range;
-	*y_g = (*y_g) * RSCS_ADXL345_SCALE_FACTOR * range;
-	*z_g = (*z_g) * RSCS_ADXL345_SCALE_FACTOR * range;*/
-
 	*x_g = x * 0.004f;
 	*y_g = y * 0.004f;
 	*z_g = z * 0.004f;
