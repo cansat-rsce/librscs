@@ -19,14 +19,51 @@ struct rscs_bmp280_descriptor {
 	rscs_bmp280_calibration_values_t calibration_values;
 	// Режим работы - непрерывный, одиночный, ожидания
 	rscs_bmp280_mode_t mode;
-	rscs_bmp280_addr_t addr;
 	rscs_e (*read_reg)(rscs_bmp280_descriptor_t * /*descr*/, uint8_t /*reg_addr*/, void * /*buffer*/, size_t /*buffer_size*/);
 	rscs_e (*write_reg)(rscs_bmp280_descriptor_t * /*descr*/, uint8_t /*reg_addr*/, const void * /*buffer*/, size_t /*buffer_size*/);
-};
 
+	union
+	{
+		struct
+		{
+			rscs_bmp280_addr_t addr;
+		} i2c;
+		struct
+		{
+			volatile uint8_t * cs_port;
+			uint8_t cs_pin_mask;
+		} spi;
+	} bus_params;
+};
 
 //Макрос для возможности обработки ошибок
 #define OPERATION(OP) error = OP; if(error != RSCS_E_NONE) goto end;
+
+static rscs_e _read_reg_spi(rscs_bmp280_descriptor_t * descr, uint8_t reg_addr,
+		void * buffer, size_t buffer_size)
+{
+	*descr->bus_params.spi.cs_port &= ~(descr->bus_params.spi.cs_pin_mask);
+
+	reg_addr |= (1<<7);
+	rscs_spi_write(&reg_addr,1);
+	rscs_spi_read(buffer, buffer_size, 0xFF);
+
+	*descr->bus_params.spi.cs_port |= (descr->bus_params.spi.cs_pin_mask);
+	return RSCS_E_NONE;
+}
+
+static rscs_e _write_reg_spi(rscs_bmp280_descriptor_t * descr, uint8_t reg_addr,
+		const void * buffer, size_t buffer_size)
+{
+	*descr->bus_params.spi.cs_port &= ~(descr->bus_params.spi.cs_pin_mask);
+
+	reg_addr &= ~(1<<7);
+	rscs_spi_write(&reg_addr,1);
+	rscs_spi_write(buffer,buffer_size);
+
+	*descr->bus_params.spi.cs_port |= (descr->bus_params.spi.cs_pin_mask);
+	return RSCS_E_NONE;
+}
 
 
 static rscs_e _read_reg_i2c(rscs_bmp280_descriptor_t * descr, uint8_t reg_addr, void * buffer, size_t buffer_size)
@@ -34,10 +71,10 @@ static rscs_e _read_reg_i2c(rscs_bmp280_descriptor_t * descr, uint8_t reg_addr, 
 	rscs_e error = RSCS_E_NONE;
 
 	OPERATION(rscs_i2c_start());
-	OPERATION(rscs_i2c_send_slaw(descr->addr, rscs_i2c_slaw_write));
+	OPERATION(rscs_i2c_send_slaw(descr->bus_params.i2c.addr, rscs_i2c_slaw_write));
 	OPERATION(rscs_i2c_write_byte(reg_addr));
 	OPERATION(rscs_i2c_start());
-	OPERATION(rscs_i2c_send_slaw(descr->addr, rscs_i2c_slaw_read));
+	OPERATION(rscs_i2c_send_slaw(descr->bus_params.i2c.addr, rscs_i2c_slaw_read));
 	OPERATION(rscs_i2c_read(buffer, buffer_size, true));
 
 end:
@@ -50,7 +87,7 @@ static rscs_e _write_reg_i2c(rscs_bmp280_descriptor_t * descr, uint8_t reg_addr,
 {
 	rscs_e error = RSCS_E_NONE;
 	OPERATION(rscs_i2c_start());
-	OPERATION(rscs_i2c_send_slaw(descr->addr, rscs_i2c_slaw_write));
+	OPERATION(rscs_i2c_send_slaw(descr->bus_params.i2c.addr, rscs_i2c_slaw_write));
 	OPERATION(rscs_i2c_write_byte(reg_addr));
 	OPERATION(rscs_i2c_write(buffer, buffer_size));
 
@@ -63,9 +100,33 @@ end:
 
 rscs_bmp280_descriptor_t * rscs_bmp280_initi2c(rscs_bmp280_addr_t addr){
 	rscs_bmp280_descriptor_t * pointer = (rscs_bmp280_descriptor_t *) malloc(sizeof(rscs_bmp280_descriptor_t));
-	pointer->addr = addr;
+	if (pointer == NULL)
+		return NULL;
+
+	pointer->bus_params.i2c.addr = addr;
 	pointer->read_reg = _read_reg_i2c;
 	pointer->write_reg = _write_reg_i2c;
+	return pointer;
+}
+
+
+rscs_bmp280_descriptor_t * rscs_bmp280_initspi(volatile uint8_t * cs_port,
+		volatile uint8_t * cs_ddr, uint8_t pin_n)
+{
+	rscs_bmp280_descriptor_t * pointer = (rscs_bmp280_descriptor_t *) malloc(sizeof(rscs_bmp280_descriptor_t));
+	if (pointer == NULL)
+		return NULL;
+
+	pointer->bus_params.spi.cs_port = cs_port;
+	pointer->bus_params.spi.cs_pin_mask = (1 << pin_n);
+	pointer->read_reg = _read_reg_spi;
+	pointer->write_reg = _write_reg_spi;
+	*cs_ddr |= pointer->bus_params.spi.cs_pin_mask;
+
+	*pointer->bus_params.spi.cs_port &= ~(pointer->bus_params.spi.cs_pin_mask);
+	_delay_ms(10);
+	*pointer->bus_params.spi.cs_port |= (pointer->bus_params.spi.cs_pin_mask);
+
 	return pointer;
 }
 

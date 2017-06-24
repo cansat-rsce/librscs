@@ -1,5 +1,5 @@
-#ifndef BMP280_H_
-#define BMP280_H_
+#ifndef RSCS_BMP280_H_
+#define RSCS_BMP280_H_
 
 #include "error.h"
 #include "i2c.h"
@@ -121,6 +121,9 @@ typedef struct rscs_bmp280_descriptor rscs_bmp280_descriptor_t;
 // rscs_bmp280_descriptor_t * rscs_bmp280_initspi(); /* не реализовано*/
 rscs_bmp280_descriptor_t * rscs_bmp280_initi2c(rscs_bmp280_addr_t addr);
 
+rscs_bmp280_descriptor_t * rscs_bmp280_initspi(volatile uint8_t * cs_port,
+		volatile uint8_t * cs_ddr, uint8_t pin_n);
+
 // Освобождение дескритора датчика
 void rscs_bmp280_deinit(rscs_bmp280_descriptor_t * descr);
 
@@ -158,4 +161,4 @@ rscs_e rscs_bmp280_calculate(const rscs_bmp280_calibration_values_t * calvals , 
 //Прочитать регистр статуса устройства
 uint8_t rscs_bmp280_read_status(rscs_bmp280_descriptor_t * bmp);
 
-#endif /* BMP280_H_ */
+#endif /* RSCS_BMP280_H_ */

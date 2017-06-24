@@ -48,8 +48,8 @@ void rscs_servo_calibrate(int n, float min_ms, float max_ms)
 	}
 	if(t != NULL)
 	{
-		t->min = (int) (TEAK_IN_MS * min_ms);
-		t->max = (int) (TEAK_IN_MS * max_ms);
+		t->min = (int) (TEAK_IN_MS * min_ms) / PRESCALER;
+		t->max = (int) (TEAK_IN_MS * max_ms) / PRESCALER;
 	}
 }
 
@@ -130,7 +130,11 @@ static void _exclude_servo(rscs_servo *tmp)
 
 void rscs_servo_init(int n)
 {
-	RSCS_SERVO_PORT_DDR = 0xFF;
+	for(int i = 0; i < n; i++)
+	{
+		PORT_UP = (PORT_UP << 1) + 1;
+	}
+	RSCS_SERVO_PORT_DDR |= PORT_UP;
 	head = malloc(sizeof(rscs_servo));
 	_init_servo(0, head);
 	rscs_servo * temp = head;
@@ -142,10 +146,6 @@ void rscs_servo_init(int n)
 	}
 	current = head;
 	temp->next = NULL;
-	for(int i = 0; i < n; i++)
-	{
-		PORT_UP = (PORT_UP << 1) + 1;
-	}
 }
 
 void rscs_servo_set_angle(int n, int angle)

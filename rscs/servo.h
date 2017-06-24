@@ -1,5 +1,5 @@
-#ifndef SERVOFUNCTIONS_H_
-#define SERVOFUNCTIONS_H_
+#ifndef RSCS_SERVO_H_
+#define RSCS_SERVO_H_
 
 #include <stdint.h>
 
@@ -19,4 +19,4 @@ void rscs_servo_calibrate(int n, float min_ms, float max_ms);
 // TODO: SERVO: Привести название функции к стандартам кодирования
 void _servo_set_mcs(int n,int mcs);
 
-#endif /* SERVOFUNCTIONS_H_ */
+#endif /* RSCS_SERVO_H_ */
