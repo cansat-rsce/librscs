@@ -14,23 +14,6 @@
 #include "../ina219.h"
 #include "../i2c.h"
 
-#define INA_RST		15
-#define INA_BRNG	13
-#define INA_PG1		12
-#define INA_PG0		11
-#define INA_BADC4	10
-#define INA_BADC3	9
-#define INA_BADC2	8
-#define INA_BADC1	7
-#define INA_SADC4	6
-#define INA_SADC3	5
-#define INA_SADC2	4
-#define INA_SADC1	3
-#define INA_MODE3	2
-#define INA_MODE2	1
-#define INA_MODE1	0
-
-
 
 struct rscs_ina219_t
 {
@@ -112,9 +95,6 @@ rscs_ina219_t * rscs_ina219_init(uint8_t i2c_addr)
 		return NULL;
 
 	retval->address = i2c_addr;
-	uint16_t temp = 0;
-	temp |= (1<<INA_BADC2) | (1<<INA_BADC1) | (1<<INA_SADC2) | (1<<INA_SADC1);
-	_write_reg(retval, 0x00, temp);
 
 	return retval;
 }
@@ -282,4 +262,20 @@ rscs_e rscs_ina219_set_cal(rscs_ina219_t * device, uint16_t calreg)
 
 	return RSCS_E_NONE;
 }
+
+rscs_e rscs_ina219_set_cfg(rscs_ina219_t * device, uint16_t cfgreg)
+{
+	rscs_e error;
+
+	error = _write_reg(device, 0x00, cfgreg);
+	if(error != RSCS_E_NONE)
+		return error;
+
+	return RSCS_E_NONE;
+}
+
+/*rscs_e rscs_ina_read_reg(rscs_ina219_t * device, uint8_t reg_addr, uint16_t * reg_value)
+{
+	return _read_reg(device, reg_addr, reg_value);
+}*/
 
