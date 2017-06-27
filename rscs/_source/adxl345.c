@@ -156,9 +156,6 @@ rscs_adxl345_t * rscs_adxl345_initi2c(rscs_i2c_addr_t addr) {
 	if (!retval)
 		return retval;
 
-	// и инициализируем
-	// TODO: ADXL: Вынести первичную инициализицию в функцию startup, чтобы оттуда можно было
-	// вернуть код ошибки
 	retval->addr = addr;
 	retval->range = RSCS_ADXL345_RANGE_2G;		//диапазон 2g (по умолчанию)
 
@@ -291,19 +288,6 @@ end:
 
 
 void rscs_adxl345_cast_to_G(rscs_adxl345_t * device, int16_t x, int16_t y, int16_t z, float * x_g, float * y_g, float * z_g) {
-	/*uint8_t  range = 1;
-
-	range = (1 << device->range);
-
-	if(x >> 9) *x_g = -(float)(!x + 1);	//если 10-й бит равен 1, то число отрицательное
-	if(x >> 9) *y_g = -(float)(!y + 1);
-	if(x >> 9) *z_g = -(float)(!z + 1);
-
-	*x_g = (*x_g) * RSCS_ADXL345_SCALE_FACTOR * range;
-	*y_g = (*y_g) * RSCS_ADXL345_SCALE_FACTOR * range;
-	*z_g = (*z_g) * RSCS_ADXL345_SCALE_FACTOR * range;*/
-
-	// FIXME: ADXL: это код не похож на правильный
 	*x_g = x * 0.004f;
 	*y_g = y * 0.004f;
 	*z_g = z * 0.004f;
