@@ -70,6 +70,7 @@
 
 #define spi_start(bus) (*bus->CSPORT &= ~bus->CSMASK)
 #define spi_stop(bus) (*bus->CSPORT |= bus->CSMASK)
+#define spi_ex(bus, val) (bus->exchange(val))
 
 
 struct rscs_nrf24l01_bus_t{
@@ -80,98 +81,44 @@ struct rscs_nrf24l01_bus_t{
 
 	volatile uint8_t * CEPORT; //Chip enable NRF
 	uint8_t CEMASK;
-
-	rscs_nrf24l01_mode_t mode;
 };
 
 static uint8_t _rreg(uint8_t reg, rscs_nrf24l01_bus_t * bus){
 	spi_start(bus);
 
-	uint8_t retval = bus->exchange(reg | R_REG);
+	uint8_t retval = spi_ex(bus, reg | R_REG);
 
 	if(reg == STATUS) {
-		*bus->CSPORT |= bus->CSMASK;
+		spi_stop(bus);
 		return retval;
 	}
-
-	retval = bus->exchange(NOP);
+	retval = spi_ex(bus, NOP);
 
 	spi_stop(bus);
-
 	return retval;
 }
 
 static void _wreg(uint8_t reg, uint8_t val, rscs_nrf24l01_bus_t * bus){
 	spi_start(bus);
 
-	bus->exchange(reg | W_REG);
-	bus->exchange(val);
+	spi_ex(bus, reg | W_REG);
+	spi_ex(bus, val);
 
 	spi_stop(bus);
 }
 
-static inline void _pwr_up(rscs_nrf24l01_bus_t * bus){
-	_wreg(CONFIG, _rreg(CONFIG, bus) | (1 << PWR_UP), bus);
+void rscs_nrf24l01_configure(rscs_nrf24l01_bus_t * bus, uint8_t config){
+	_wreg(CONFIG, config | (1 << PWR_UP), bus);
 
-	_delay_us(200);
+	_delay_us(135);
 }
 
-static inline void _pwr_down(rscs_nrf24l01_bus_t * bus){
-	_wreg(CONFIG, _rreg(CONFIG, bus) & ~(1 << PWR_UP), bus);
-
-	_delay_us(200);
+void rscs_nrf24l01_feature(rscs_nrf24l01_bus_t * bus, uint8_t feature){
+	_wreg(FEATURE, feature, bus);
 }
 
-static inline void _enable(rscs_nrf24l01_bus_t * bus){
-	*bus->CEPORT |= bus->CEMASK;
+void rscs_nrf24l01_en_aa(rscs_nrf24l01_bus_t * bus, ){
 
-	_delay_us(200);
-}
-
-static inline void _disable(rscs_nrf24l01_bus_t * bus){
-	*bus->CEPORT &= ~bus->CEMASK;
-
-	_delay_us(200);
-}
-
-static void _clock_data(void *data, size_t size, rscs_nrf24l01_bus_t *bus){
-	uint8_t *buf = (uint8_t *)data;
-
-	spi_start(bus);
-
-	bus->exchange(W_TX_PAY);
-	while(size--) bus->exchange(*buf++);
-
-	spi_stop(bus);
-}
-
-static uint8_t _get_data(void *data, rscs_nrf24l01_bus_t *bus){
-	uint8_t *buf = (uint8_t *)data;
-
-	spi_start(bus);
-
-	uint8_t len = bus->exchange(R_RX_PL_WID);
-	bus->exchange(R_RX_PAY);
-	for(int i = 0; i < len; i++) buf[i] = bus->exchange(NOP);
-	bus->exchange(FL_RX);
-
-	spi_stop(bus);
-
-	return len;
-}
-
-static void _set_mode(rscs_nrf24l01_bus_t *bus, rscs_nrf24l01_mode_t mode){
-	if(mode == RSCS_NRF24L01_MODE_PRX){
-		_wreg(CONFIG, _rreg(CONFIG, bus) | (1 << PRIM_RX), bus);
-	}
-	else if(mode == RSCS_NRF24L01_MODE_PTX){
-		_wreg(CONFIG, (_rreg(CONFIG, bus) & ~(1 << PRIM_RX)), bus);
-	}
-	else return;
-
-	bus->mode = mode;
-
-	_delay_us(200);
 }
 
 rscs_nrf24l01_bus_t * rscs_nrf24l01_init(uint8_t (*exchange)(uint8_t byte),
@@ -213,90 +160,11 @@ void info(rscs_nrf24l01_bus_t * bus){
 	*bus->CSPORT |= bus->CSMASK;
 }
 
-uint8_t test(rscs_nrf24l01_bus_t * PTX, rscs_nrf24l01_bus_t * PRX){
-	_disable(PRX);
-	_disable(PTX);
+uint8_t test(rscs_nrf24l01_bus_t * nrf){
+	rscs_nrf24l01_configure(nrf, RSCS_NRF24L01_PTX |
+			RSCS_NRF24L01_CRC_2B | RSCS_NRF24L01_EN_CRC);
 
-	_wreg(CONFIG, (1 << EN_CRC) | (1 << PWR_UP) | (1 << PRIM_RX), PRX);
-	_delay_ms(100);
-	_wreg(CONFIG, (1 << EN_CRC) | (1 << PWR_UP), PTX);
-	_delay_ms(100);
-	_wreg(RX_PW_P0, 1, PTX);
-	_wreg(RX_PW_P0, 1, PRX);
-
-	info(PTX);
-	printf("\n");
-	info(PRX);
-	printf("\n-----------------------------------\n");
-
-	*PTX->CSPORT &= ~PTX->CSMASK;
-	PTX->exchange(W_TX_PAY);
-	PTX->exchange(64);
-	*PTX->CSPORT |= PTX->CSMASK;
-
-	info(PTX);
-	printf("\n");
-	info(PRX);
-	printf("\n-----------------------------------\n");
-
-	_enable(PRX);
-	_delay_ms(100);
-	_enable(PTX);
-
-	_delay_ms(100);
-
-	info(PTX);
-	printf("\n");
-	info(PRX);
-	printf("\n-----------------------------------\n");
-
-	*PRX->CSPORT &= ~PRX->CSMASK;
-	PRX->exchange(R_RX_PAY);
-	uint8_t res = PRX->exchange(NOP);
-	*PRX->CSPORT |= PRX->CSMASK;
-
-	printf("%d", res);
-
-	while(1){}
-	/*_pwr_up(PTX);
-	_pwr_up(PRX);
-
-	_wreg(FEATURE, (1 << EN_DPL), PTX);
-	_wreg(FEATURE, (1 << EN_DPL), PRX);
-
-	_set_mode(PTX, RSCS_NRF24L01_MODE_PTX);
-	_set_mode(PRX, RSCS_NRF24L01_MODE_PTX);
-
-	char arr[] = "abcd";
-
-	while(1){
-		printf("writing\n");
-		_clock_data(arr, sizeof(arr), PTX);
-		_enable(PTX);
-
-		while(1){
-			uint8_t reg = _rreg(STATUS, PTX);
-
-			if(reg & (1 << 4)){
-				printf("max retransmit-%d\n", reg);
-				break;
-			}
-
-			if(reg & (1 << 5)){
-				printf("transmit-%d\n", reg);
-				break;
-			}
-
-			printf("waiting transmit-%d\n", reg);
-		}
-		_disable(bus);
-
-		_wreg(STATUS, _rreg(STATUS, PTX), PTX);
-		printf("cleared\n--------------------\n");
-
-		_delay_ms(1000);
-	}*/
-
+	info(nrf);
 
 	return 0;
 }
