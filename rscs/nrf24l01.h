@@ -2,6 +2,7 @@
 #define RSCS_NRF24L01_H_
 
 #include <stdint.h>
+#include "uart.h"
 
 typedef struct rscs_nrf24l01_bus_t rscs_nrf24l01_bus_t;
 
@@ -23,7 +24,7 @@ enum{
 
 	RSCS_NRF24L01_REF_MAX_RT_INT = 0,
 	RSCS_NRF24L01_NREF_MAX_RT_INT = (1 << 5),
-}; //configure
+}; //config
 
 enum{
 	RSCS_NRF24L01_DIS_DPL = 0,
@@ -40,6 +41,6 @@ rscs_nrf24l01_bus_t * rscs_nrf24l01_init(uint8_t (*exchange)(uint8_t byte),
 											volatile uint8_t * CSPORT, uint8_t cspin,
 											volatile uint8_t * CEPORT, uint8_t cepin);
 
-uint8_t test(rscs_nrf24l01_bus_t * nrf);
+uint8_t test(rscs_nrf24l01_bus_t * nrf1, rscs_nrf24l01_bus_t * nrf2, rscs_uart_bus_t* uart);
 
 #endif
