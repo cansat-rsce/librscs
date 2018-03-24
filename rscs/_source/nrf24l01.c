@@ -79,6 +79,8 @@
 
 #define FIFO_STATUS		0x17
 
+#define EN_AA			0x01
+
 #define chip_en(bus) (*bus->CEPORT |= bus->CEMASK)
 #define chip_dis(bus) (*bus->CEPORT &= ~bus->CEMASK)
 #define spi_start(bus) (*bus->CSPORT &= ~bus->CSMASK)
@@ -121,10 +123,10 @@ static void _wreg(uint8_t reg, uint8_t val, rscs_nrf24l01_bus_t * bus){
 }
 
 void rscs_nrf24l01_set_config(rscs_nrf24l01_bus_t * bus, uint8_t config){
-	_wreg(CONFIG, config | (1 << PWR_UP), bus);
-	_delay_us(135);
 	if(config & RSCS_NRF24L01_PRX) chip_en(bus);
 	else chip_dis(bus);
+	_wreg(CONFIG, config | (1 << PWR_UP), bus);
+	_delay_us(135);
 }
 
 void rscs_nrf24l01_set_feature(rscs_nrf24l01_bus_t * bus, uint8_t feature){
@@ -173,6 +175,15 @@ void rscs_nrf24l01_set_tx_addr(rscs_nrf24l01_bus_t * bus, uint64_t addr){
 
 void rscs_nrf24l01_set_retr(rscs_nrf24l01_bus_t * bus, uint8_t delay, uint8_t count){
 	_wreg(SETUP_RETR, (delay << 4) | (count & 0xF), bus);
+}
+
+void rscs_nrf24l01_set_rf_ch(rscs_nrf24l01_bus_t * bus, uint8_t freq){
+	_wreg(RF_CH, freq, bus);
+}
+
+void rscs_nrf24l01_set_aa(rscs_nrf24l01_bus_t * bus, uint8_t pipe_num, bool en){
+	if(en) _wreg(EN_AA, _rreg(EN_AA, bus) | (1 << pipe_num), bus);
+	else _wreg(EN_AA, _rreg(EN_AA, bus) & ~(1 << pipe_num), bus);
 }
 
 uint8_t rscs_nrf24l01_write(rscs_nrf24l01_bus_t * bus, void* data, size_t size){
@@ -256,6 +267,7 @@ void info(rscs_nrf24l01_bus_t * bus){
 	printf("EN_RXADDR: %d\n", _rreg(EN_RXADDR, bus));
 	printf("SETUP_AW: %d\n", _rreg(SETUP_AW, bus));
 	printf("FIFO_STATUS: %d\n", _rreg(FIFO_STATUS, bus));
+	printf("EN_AA: %d\n", _rreg(EN_AA, bus));
 
 	for(uint8_t i = 0; i < 6; i++) printf("P%d: %d\n", i, _rreg(RX_PW_P0 + i, bus));
 
@@ -276,26 +288,59 @@ void info(rscs_nrf24l01_bus_t * bus){
 	printf("\n---------------------\n");
 }
 
-uint8_t test(rscs_nrf24l01_bus_t * nrf1, rscs_nrf24l01_bus_t * nrf2, rscs_uart_bus_t* uart){
-	rscs_nrf24l01_set_config(nrf1, RSCS_NRF24L01_EN_CRC | RSCS_NRF24L01_CRC_2B | RSCS_NRF24L01_PTX);
+uint8_t test(rscs_nrf24l01_bus_t * nrf1/*, rscs_nrf24l01_bus_t * nrf2, rscs_uart_bus_t* uart*/){
+	spi_start(nrf1);
+	spi_ex(nrf1, FL_TX);
+	spi_ex(nrf1, FL_RX);
+	spi_stop(nrf1);
+
+	_wreg(STATUS, _rreg(STATUS, nrf1), nrf1);
+	_wreg(RF_SETUP, 0b111, nrf1);
+
+	rscs_nrf24l01_set_rf_ch(nrf1, 0x4c);
 	rscs_nrf24l01_set_feature(nrf1, RSCS_NRF24L01_EN_DPL | RSCS_NRF24L01_EN_DYN_ACK | RSCS_NRF24L01_EN_ACK_PAY);
 	rscs_nrf24l01_set_pipe(nrf1, 0, true);
-	rscs_nrf24l01_set_pipe(nrf1, 1, false);
+	rscs_nrf24l01_set_pipe_dpl(nrf1, 0, true);
+	rscs_nrf24l01_set_rx_addr(nrf1, 0, 0xe7e7e7e7e7);
+	rscs_nrf24l01_set_aa(nrf1, 0, true);
+	rscs_nrf24l01_set_config(nrf1, RSCS_NRF24L01_EN_CRC | RSCS_NRF24L01_CRC_2B | RSCS_NRF24L01_PRX);
+	//rscs_nrf24l01_set_pipe(nrf1, 1, false);
 	//rscs_nrf24l01_set_pipe_bytes(nrf1, 0, 1);
 	//rscs_nrf24l01_set_pipe_dpl(nrf1, 0, true);
 	//rscs_nrf24l01_set_rx_addr(nrf1, 0, 0x1122334455);
 	//rscs_nrf24l01_set_tx_addr(nrf1, 0x1122334455);
 	//rscs_nrf24l01_set_retr(nrf1, 5, 5);
 
-	rscs_nrf24l01_set_config(nrf2, RSCS_NRF24L01_EN_CRC | RSCS_NRF24L01_CRC_2B | RSCS_NRF24L01_PRX);
+	uint8_t data[32];
+
+	while(1) {
+		info(nrf1);
+		_delay_ms(2000);
+		if((1 << RX_DR) & _rreg(STATUS, nrf1)){
+			uint8_t width = rscs_nrf24l01_read(nrf1, data);
+			printf("GET DATA! %d bytes: \n", width);
+			for(int i = 0; i < width; i++){
+				printf("%c ", (char)data[i]);
+			}
+			printf("\n");
+
+			spi_start(nrf1);
+			spi_ex(nrf1, FL_RX);
+			spi_stop(nrf1);
+
+			_wreg(STATUS, _rreg(STATUS, nrf1), nrf1);
+		}
+	}
+
+	/*rscs_nrf24l01_set_config(nrf2, RSCS_NRF24L01_EN_CRC | RSCS_NRF24L01_CRC_2B | RSCS_NRF24L01_PRX);
 	rscs_nrf24l01_set_feature(nrf2, RSCS_NRF24L01_EN_DPL | RSCS_NRF24L01_EN_DYN_ACK | RSCS_NRF24L01_EN_ACK_PAY);
 	rscs_nrf24l01_set_pipe(nrf2, 0, true);
 	rscs_nrf24l01_set_pipe(nrf2, 1, false);
-	//rscs_nrf24l01_set_pipe_bytes(nrf2, 0, 1);
-	//rscs_nrf24l01_set_pipe_dpl(nrf2, 0, true);
-	//rscs_nrf24l01_set_rx_addr(nrf2, 0, 0x1122334455);
-	//rscs_nrf24l01_set_tx_addr(nrf2, 0x1122334455);
-	//rscs_nrf24l01_set_retr(nrf2, 5, 5);
+	rscs_nrf24l01_set_pipe_bytes(nrf2, 0, 1);
+	rscs_nrf24l01_set_pipe_dpl(nrf2, 0, true);
+	rscs_nrf24l01_set_rx_addr(nrf2, 0, 0x1122334455);
+	rscs_nrf24l01_set_tx_addr(nrf2, 0x1122334455);
+	rscs_nrf24l01_set_retr(nrf2, 5, 5);
 
 	char buf[33], data[33];
 	size_t size, temp;
@@ -320,7 +365,7 @@ uint8_t test(rscs_nrf24l01_bus_t * nrf1, rscs_nrf24l01_bus_t * nrf2, rscs_uart_b
 		size = rscs_nrf24l01_read(nrf2, data);
 		data[size] = 0;
 		printf("GOT FROM NRF: %s\n", data);
-	}
+	}*/
 
 	return 0;
 }
