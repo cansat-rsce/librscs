@@ -159,8 +159,8 @@ static void _wreg5(uint8_t reg, uint64_t val, rscs_nrf24l01_bus_t * bus){
 
 
 
-rscs_nrf25l01_config_t* rscs_nrf24l01_get_config(rscs_nrf24l01_bus_t * bus){
-	rscs_nrf25l01_config_t* retval = (rscs_nrf25l01_config_t*)malloc(sizeof(rscs_nrf25l01_config_t));
+rscs_nrf24l01_config_t* rscs_nrf24l01_get_config(rscs_nrf24l01_bus_t * bus){
+	rscs_nrf24l01_config_t* retval = (rscs_nrf24l01_config_t*)malloc(sizeof(rscs_nrf24l01_config_t));
 	if(retval == NULL) return NULL;
 
 	uint8_t config 		= _rreg(CONFIG, bus);
@@ -200,7 +200,7 @@ rscs_nrf25l01_config_t* rscs_nrf24l01_get_config(rscs_nrf24l01_bus_t * bus){
 	return retval;
 }
 
-void rscs_nrf24l01_set_config(rscs_nrf25l01_config_t* set, rscs_nrf24l01_bus_t * bus){
+void rscs_nrf24l01_set_config(rscs_nrf24l01_config_t* set, rscs_nrf24l01_bus_t * bus){
 	uint8_t config 		= (set->config.rx_dr << RX_DR) |
 						  (set->config.tx_ds << TX_DS) |
 						  (set->config.max_rt << MAX_RT) |
@@ -233,10 +233,10 @@ void rscs_nrf24l01_set_config(rscs_nrf25l01_config_t* set, rscs_nrf24l01_bus_t *
 }
 
 
-rscs_nrf25l01_pipe_config_t* rscs_nrf24l01_get_pipe_config(uint8_t num, rscs_nrf24l01_bus_t * bus){
+rscs_nrf24l01_pipe_config_t* rscs_nrf24l01_get_pipe_config(uint8_t num, rscs_nrf24l01_bus_t * bus){
 	if(num > 5) return NULL;
 
-	rscs_nrf25l01_pipe_config_t* retval = (rscs_nrf25l01_pipe_config_t*)malloc(sizeof(rscs_nrf25l01_pipe_config_t));
+	rscs_nrf24l01_pipe_config_t* retval = (rscs_nrf24l01_pipe_config_t*)malloc(sizeof(rscs_nrf24l01_pipe_config_t));
 	if(retval == NULL) return NULL;
 
 	retval->num 	= num;
@@ -249,7 +249,7 @@ rscs_nrf25l01_pipe_config_t* rscs_nrf24l01_get_pipe_config(uint8_t num, rscs_nrf
 	return retval;
 }
 
-void rscs_nrf24l01_set_pipe_config(rscs_nrf25l01_pipe_config_t* set, rscs_nrf24l01_bus_t * bus){
+void rscs_nrf24l01_set_pipe_config(rscs_nrf24l01_pipe_config_t* set, rscs_nrf24l01_bus_t * bus){
 	uint8_t en_aa = _rreg(EN_AA, bus);
 	uint8_t en = _rreg(EN_RXADDR, bus);
 	uint8_t en_dpl = _rreg(DYNPD, bus);
@@ -331,9 +331,9 @@ rscs_nrf24l01_status_t* rscs_nrf24l01_get_status(rscs_nrf24l01_bus_t * bus){
 
 	uint8_t status = _rreg(STATUS, bus);
 
-	retval->max_rt = (status >> MAX_RT) & 1;
-	retval->rx_dr = (status >> RX_DR) & 1;
-	retval->tx_ds = (status >> TX_DS) & 1;
+	retval->max_rt 	= (status >> MAX_RT) & 1;
+	retval->rx_dr 	= (status >> RX_DR) & 1;
+	retval->tx_ds 	= (status >> TX_DS) & 1;
 	retval->tx_full = (status >> TX_FULL) & 1;
 	retval->rx_p_no = (status >> RX_P_NO) & 0b111;
 
@@ -359,7 +359,7 @@ rscs_nrf24l01_bus_t * rscs_nrf24l01_init(uint8_t (*exchange)(uint8_t byte),
 	return retval;
 }
 
-void info_pipe(rscs_nrf25l01_pipe_config_t* retval){
+void info_pipe(rscs_nrf24l01_pipe_config_t* retval){
 	printf("\n#########   NRF24L01 PIPE CONFIG DUMP   #########\n");
 	printf("num %d\n",retval->num);
 	printf("en %d\n",retval->en);
@@ -369,7 +369,7 @@ void info_pipe(rscs_nrf25l01_pipe_config_t* retval){
 	printf("######################################\n");
 }
 
-void info_nrf(rscs_nrf25l01_config_t* retval){
+void info_nrf(rscs_nrf24l01_config_t* retval){
 	/*printf("\n---------------------\n");
 	printf("CFG: %d\n", _rreg(CONFIG, bus));
 	printf("STATUS: %d\n", _rreg(STATUS, bus));
@@ -434,13 +434,19 @@ void info_nrf(rscs_nrf25l01_config_t* retval){
 	printf("######################################\n");
 }
 
+void info_st(rscs_nrf24l01_status_t* retval){
+	printf("\n#########   NRF24L01 CONFIG DUMP  #########\n");
+	printf("max_rt %d\n", retval->max_rt);
+	printf("rx_dr %d\n", retval->rx_dr);
+	printf("tx_ds %d\n", retval->tx_ds);
+	printf("tx_full %d\n", retval->tx_full);
+	printf("rx_p_no %d\n", retval->rx_p_no);
+	printf("######################################\n");
+}
+
 uint8_t test(rscs_nrf24l01_bus_t * nrf1/*, rscs_nrf24l01_bus_t * nrf2, rscs_uart_bus_t* uart*/){
-	rscs_nrf25l01_config_t * set = rscs_nrf24l01_get_config(nrf1);
-	info_nrf(set);
-	set->config.crc0 = 1;
-	rscs_nrf24l01_set_config(set, nrf1);
-	set = rscs_nrf24l01_get_config(nrf1);
-	info_nrf(set);
+	rscs_nrf24l01_status_t * set = rscs_nrf24l01_get_status(nrf1);
+	info_st(set);
 	while(1);
 
 	/*spi_start(nrf1);
