@@ -229,7 +229,44 @@ void rscs_nrf24l01_set_config(rscs_nrf25l01_config_t* set, rscs_nrf24l01_bus_t *
 	_wreg5(TX_ADDR, set->tx.addr, bus);
 	_wreg(CONFIG, config, bus);
 
-	_delay_us(135);
+	if(set->config.pwr_up) _delay_us(135);
+}
+
+rscs_nrf25l01_pipe_config_t* rscs_nrf24l01_get_pipe_config(uint8_t num, rscs_nrf24l01_bus_t * bus){
+	if(num > 5) return NULL;
+
+	rscs_nrf25l01_pipe_config_t* retval = (rscs_nrf25l01_pipe_config_t*)malloc(sizeof(rscs_nrf25l01_pipe_config_t));
+	if(retval == NULL) return NULL;
+
+	retval->num 	= num;
+	retval->en 		= (_rreg(EN_RXADDR, bus) >> retval->num) & 1;
+	retval->en_aa 	= (_rreg(EN_AA, bus) >> retval->num) & 1;
+	retval->en_dpl	= (_rreg(DYNPD, bus) >> retval->num) & 1;
+	retval->pw 		= _rreg(RX_PW_P0 + retval->num, bus);
+	retval->rx_addr = _rreg5(RX_ADDR_P0 + retval->num, bus);
+
+	return retval;
+}
+
+void rscs_nrf24l01_set_pipe_config(rscs_nrf25l01_pipe_config_t* set, rscs_nrf24l01_bus_t * bus){
+	uint8_t en_aa = _rreg(EN_AA, bus);
+	uint8_t en = _rreg(EN_RXADDR, bus);
+	uint8_t en_dpl = _rreg(DYNPD, bus);
+
+	if(set->en) 	en |= (1 << set->num);
+	else 			en |= ~(1 << set->num);
+
+	if(set->en_dpl) en_dpl |= (1 << set->num);
+	else 			en_dpl |= ~(1 << set->num);
+
+	if(set->en_aa) 	en_aa |= (1 << set->num);
+	else 		   	en_aa |= ~(1 << set->num);
+
+	_wreg(EN_AA, en_aa, bus);
+	_wreg(EN_RXADDR, en, bus);
+	_wreg(DYNPD, en_dpl, bus);
+	_wreg(RX_PW_P0 + set->num, set->pw, bus);
+	_wreg5(RX_ADDR_P0 + set->num, set->rx_addr, bus);
 }
 
 uint8_t rscs_nrf24l01_write(rscs_nrf24l01_bus_t * bus, void* data, size_t size){
@@ -301,7 +338,17 @@ rscs_nrf24l01_bus_t * rscs_nrf24l01_init(uint8_t (*exchange)(uint8_t byte),
 	return retval;
 }
 
-void info(rscs_nrf24l01_bus_t * bus){
+void info_pipe(rscs_nrf25l01_pipe_config_t* retval){
+	printf("\n#########   NRF24L01 PIPE CONFIG DUMP   #########\n");
+	printf("num %d\n",retval->num);
+	printf("en %d\n",retval->en);
+	printf("en_aa %d\n",retval->en_aa);
+	printf("en_dpl %d\n",retval->en_dpl);
+	printf("pw %d\n",retval->pw);
+	printf("######################################\n");
+}
+
+void info_nrf(rscs_nrf25l01_config_t* retval){
 	/*printf("\n---------------------\n");
 	printf("CFG: %d\n", _rreg(CONFIG, bus));
 	printf("STATUS: %d\n", _rreg(STATUS, bus));
@@ -333,9 +380,7 @@ void info(rscs_nrf24l01_bus_t * bus){
 	*bus->CSPORT |= bus->CSMASK;
 	printf("\n---------------------\n");*/
 
-	rscs_nrf25l01_config_t* retval = rscs_nrf24l01_get_config(bus);
-
-	printf("--------------------------------\n");
+	printf("\n#########   NRF24L01 CONFIG DUMP   #########\n");
 	printf("CONFIG\n");
 	printf("	rx_dr %d \n", retval->config.rx_dr);
 	printf("	tx_ds %d \n",retval->config.tx_ds);
@@ -345,38 +390,39 @@ void info(rscs_nrf24l01_bus_t * bus){
 	printf("	pwr_up %d \n",retval->config.pwr_up);
 	printf("	prim_rx %d \n",retval->config.prim_rx);
 
-	printf("SETUP_AW\n");
+	printf("--------------------------------\nSETUP_AW\n");
 	printf("	aw %d \n",retval->setup_aw.aw);
 
-	printf("SETUP_RETR\n");
+	printf("--------------------------------\nSETUP_RETR\n");
 	printf("	arc %d \n",retval->setup_retr.arc);
 	printf("	ard %d \n",retval->setup_retr.ard);
 
-	printf("RF_CH\n");
+	printf("--------------------------------\nRF_CH\n");
 	printf("	rf_ch %d \n",retval->rf_ch.rf_ch);
 
-	printf("RF_SETUP\n");
+	printf("--------------------------------\nRF_SETUP\n");
 	printf("	pll_lock %d \n",retval->rf_setup.pll_lock);
 	printf("	rf_dr %d \n",retval->rf_setup.rf_dr);
 	printf("	rf_pwr %d \n",retval->rf_setup.rf_pwr);
 	printf("	lna_hcurr %d \n",retval->rf_setup.lna_hcurr);
 
-	printf("FEATURE\n");
+	printf("--------------------------------\nFEATURE\n");
 	printf("	en_dpl %d \n",retval->feature.en_dpl);
 	printf("	en_ack_pay %d \n",retval->feature.en_ack_pay);
 	printf("	en_dyn_ack %d \n",retval->feature.en_dyn_ack);
-	printf("--------------------------------\n");
+	printf("######################################\n");
 }
 
 uint8_t test(rscs_nrf24l01_bus_t * nrf1/*, rscs_nrf24l01_bus_t * nrf2, rscs_uart_bus_t* uart*/){
-	info(nrf1);
-	rscs_nrf25l01_config_t* retval = rscs_nrf24l01_get_config(nrf1);
-	retval->config.crc0 = 1;
-	rscs_nrf24l01_set_config(retval, nrf1);
-	info(nrf1);
+	rscs_nrf25l01_config_t * set = rscs_nrf24l01_get_config(nrf1);
+	info_nrf(set);
+	set->config.crc0 = 1;
+	rscs_nrf24l01_set_config(set, nrf1);
+	set = rscs_nrf24l01_get_config(nrf1);
+	info_(set);
 	while(1);
 
-	spi_start(nrf1);
+	/*spi_start(nrf1);
 	spi_ex(nrf1, FL_TX);
 	spi_ex(nrf1, FL_RX);
 	spi_stop(nrf1);
@@ -403,7 +449,7 @@ uint8_t test(rscs_nrf24l01_bus_t * nrf1/*, rscs_nrf24l01_bus_t * nrf2, rscs_uart
 
 			_wreg(STATUS, _rreg(STATUS, nrf1), nrf1);
 		}
-	}
+	}*/
 
 	return 0;
 }

@@ -85,7 +85,8 @@ typedef struct{
 			 pw:6,
 			 en_aa:1,
 			 en_dpl:1,
-			 en:1;
+			 en:1,
+			 num:3;
 } rscs_nrf25l01_pipe_config_t;
 
 rscs_nrf24l01_bus_t * rscs_nrf24l01_init(uint8_t (*exchange)(uint8_t byte),
@@ -93,7 +94,5 @@ rscs_nrf24l01_bus_t * rscs_nrf24l01_init(uint8_t (*exchange)(uint8_t byte),
 											volatile uint8_t * CEPORT, uint8_t cepin);
 
 uint8_t test(rscs_nrf24l01_bus_t * nrf1/*, rscs_nrf24l01_bus_t * nrf2, rscs_uart_bus_t* uart*/);
-
-void info(rscs_nrf24l01_bus_t * bus);
 
 #endif
