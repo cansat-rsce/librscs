@@ -34,9 +34,7 @@
 	#define RX_DR		6
 	#define TX_DS		5
 	#define MAX_RT		4
-	#define RX_P_NO2	3
-	#define RX_P_NO1	2
-	#define RX_P_NO0	1
+	#define RX_P_NO		1
 	#define TX_FULL		0
 
 #define CONFIG			0x00
@@ -104,6 +102,14 @@ struct rscs_nrf24l01_bus_t{
 	uint8_t CEMASK;
 };
 
+static void inline _command(uint8_t com, rscs_nrf24l01_bus_t * bus){
+	spi_start(bus);
+
+	spi_ex(bus, com);
+
+	spi_stop(bus);
+}
+
 static uint8_t _rreg(uint8_t reg, rscs_nrf24l01_bus_t * bus){
 	spi_start(bus);
 
@@ -151,13 +157,7 @@ static void _wreg5(uint8_t reg, uint64_t val, rscs_nrf24l01_bus_t * bus){
 	spi_stop(bus);
 }
 
-static void _command(uint8_t com, rscs_nrf24l01_bus_t * bus){
-	spi_start(bus);
 
-	spi_ex(bus, com);
-
-	spi_stop(bus);
-}
 
 rscs_nrf25l01_config_t* rscs_nrf24l01_get_config(rscs_nrf24l01_bus_t * bus){
 	rscs_nrf25l01_config_t* retval = (rscs_nrf25l01_config_t*)malloc(sizeof(rscs_nrf25l01_config_t));
@@ -232,6 +232,7 @@ void rscs_nrf24l01_set_config(rscs_nrf25l01_config_t* set, rscs_nrf24l01_bus_t *
 	if(set->config.pwr_up) _delay_us(135);
 }
 
+
 rscs_nrf25l01_pipe_config_t* rscs_nrf24l01_get_pipe_config(uint8_t num, rscs_nrf24l01_bus_t * bus){
 	if(num > 5) return NULL;
 
@@ -269,24 +270,27 @@ void rscs_nrf24l01_set_pipe_config(rscs_nrf25l01_pipe_config_t* set, rscs_nrf24l
 	_wreg5(RX_ADDR_P0 + set->num, set->rx_addr, bus);
 }
 
+
 uint8_t rscs_nrf24l01_write(rscs_nrf24l01_bus_t * bus, void* data, size_t size){
 	size = size > 32 ? 32 : size;
 	uint8_t* buf = (uint8_t*)data;
 
-	spi_start(bus);
-	spi_ex(bus, FL_TX);
-	spi_stop(bus);
+	_command(FL_TX, bus);
 
 	if(_rreg(CONFIG, bus) & (1 << PRIM_RX)){
 		spi_start(bus);
+
 		spi_ex(bus, W_ACK_PAY);
 		for(int i = 0; i < size; i++) spi_ex(bus, *(buf + i));
+
 		spi_stop(bus);
 	}
 	else{
 		spi_start(bus);
+
 		spi_ex(bus, W_TX_PAY);
 		for(int i = 0; i < size; i++) spi_ex(bus, *(buf + i));
+
 		spi_stop(bus);
 
 		chip_en(bus);
@@ -315,9 +319,26 @@ uint8_t rscs_nrf24l01_read(rscs_nrf24l01_bus_t * bus, void* data){
 
 	spi_stop(bus);
 
+	_command(FL_RX, bus);
+
 	return width;
 }
 
+
+rscs_nrf24l01_status_t* rscs_nrf24l01_get_status(rscs_nrf24l01_bus_t * bus){
+	rscs_nrf24l01_status_t* retval = (rscs_nrf24l01_status_t*)malloc(sizeof(rscs_nrf24l01_status_t));
+	if(retval == NULL) return NULL;
+
+	uint8_t status = _rreg(STATUS, bus);
+
+	retval->max_rt = (status >> MAX_RT) & 1;
+	retval->rx_dr = (status >> RX_DR) & 1;
+	retval->tx_ds = (status >> TX_DS) & 1;
+	retval->tx_full = (status >> TX_FULL) & 1;
+	retval->rx_p_no = (status >> RX_P_NO) & 0b111;
+
+	return retval;
+}
 
 rscs_nrf24l01_bus_t * rscs_nrf24l01_init(uint8_t (*exchange)(uint8_t byte),
 											volatile uint8_t * CSPORT, uint8_t cspin,
@@ -419,7 +440,7 @@ uint8_t test(rscs_nrf24l01_bus_t * nrf1/*, rscs_nrf24l01_bus_t * nrf2, rscs_uart
 	set->config.crc0 = 1;
 	rscs_nrf24l01_set_config(set, nrf1);
 	set = rscs_nrf24l01_get_config(nrf1);
-	info_(set);
+	info_nrf(set);
 	while(1);
 
 	/*spi_start(nrf1);

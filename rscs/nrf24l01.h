@@ -89,6 +89,26 @@ typedef struct{
 			 num:3;
 } rscs_nrf25l01_pipe_config_t;
 
+typedef struct{
+	uint8_t rx_dr:1,
+			tx_ds:1,
+			max_rt:1,
+			rx_p_no:3,
+			tx_full:1;
+} rscs_nrf24l01_status_t;
+
+uint8_t rscs_nrf24l01_write(rscs_nrf24l01_bus_t * bus, void* data, size_t size);
+
+uint8_t rscs_nrf24l01_read(rscs_nrf24l01_bus_t * bus, void* data);
+
+rscs_nrf25l01_config_t* rscs_nrf24l01_get_config(rscs_nrf24l01_bus_t * bus);
+
+void rscs_nrf24l01_set_config(rscs_nrf25l01_config_t* set, rscs_nrf24l01_bus_t * bus);
+
+rscs_nrf25l01_pipe_config_t* rscs_nrf24l01_get_pipe_config(uint8_t num, rscs_nrf24l01_bus_t * bus);
+
+void rscs_nrf24l01_set_pipe_config(rscs_nrf25l01_pipe_config_t* set, rscs_nrf24l01_bus_t * bus);
+
 rscs_nrf24l01_bus_t * rscs_nrf24l01_init(uint8_t (*exchange)(uint8_t byte),
 											volatile uint8_t * CSPORT, uint8_t cspin,
 											volatile uint8_t * CEPORT, uint8_t cepin);
