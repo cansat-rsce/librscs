@@ -210,7 +210,7 @@ void rscs_nrf24l01_set_config(rscs_nrf24l01_config_t* set, rscs_nrf24l01_bus_t *
 						  (set->config.prim_rx << PRIM_RX);
 
 	uint8_t setup_retr 	= (set->setup_retr.arc << ARC) |
-						  (set->setup_retr.arc << ARD);
+						  (set->setup_retr.ard << ARD);
 
 	uint8_t rf_setup 	= (set->rf_setup.pll_lock << PLL_LOCK) |
 					      (set->rf_setup.rf_dr << RF_DR) |
@@ -445,8 +445,40 @@ void info_st(rscs_nrf24l01_status_t* retval){
 }
 
 uint8_t test(rscs_nrf24l01_bus_t * nrf1/*, rscs_nrf24l01_bus_t * nrf2, rscs_uart_bus_t* uart*/){
-	rscs_nrf24l01_status_t * set = rscs_nrf24l01_get_status(nrf1);
-	info_st(set);
+	//while(1)
+	{
+		//_delay_ms(200);
+		rscs_nrf24l01_config_t * set = rscs_nrf24l01_get_config(nrf1);
+		set->config.crc0 = 0;
+		set->config.en_crc = 1;
+		set->config.max_rt = 0;
+		set->config.rx_dr = 0;
+		set->config.tx_ds = 0;
+		set->config.pwr_up = 1;
+		set->config.prim_rx = 0;
+
+		set->feature.en_ack_pay = 1;
+		set->feature.en_dpl = 1;
+		set->feature.en_dyn_ack = 1;
+
+		set->rf_ch.rf_ch = 2;
+
+		set->rf_setup.pll_lock = 0;
+		set->rf_setup.rf_dr = 1;
+		set->rf_setup.rf_pwr = 3;
+		set->rf_setup.lna_hcurr = 1;
+
+		set->setup_aw.aw = 3;
+
+		set->setup_retr.arc = 3;
+		set->setup_retr.ard = 2;
+
+		set->tx.addr = 0x1122334455;
+
+		info_nrf(set);
+		rscs_nrf24l01_set_config(set, nrf1);
+		info_nrf(rscs_nrf24l01_get_config(nrf1));
+	}
 	while(1);
 
 	/*spi_start(nrf1);
