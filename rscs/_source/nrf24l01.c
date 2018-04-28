@@ -338,6 +338,14 @@ rscs_nrf24l01_status_t* rscs_nrf24l01_get_status(rscs_nrf24l01_bus_t * bus){
 	return retval;
 }
 
+
+void rscs_nrf24l01_flash(rscs_nrf24l01_bus_t * bus){
+	_wreg(STATUS, _rreg(STATUS, bus), bus);
+	_command(FL_TX, bus);
+	_command(FL_RX, bus);
+}
+
+
 rscs_nrf24l01_bus_t * rscs_nrf24l01_init(uint8_t (*exchange)(uint8_t byte),
 											volatile uint8_t * CSPORT, uint8_t cspin,
 											volatile uint8_t * CEPORT, uint8_t cepin)
