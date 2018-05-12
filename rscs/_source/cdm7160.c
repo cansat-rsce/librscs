@@ -5,56 +5,79 @@
  *      Author: developer
  */
 #include <stdlib.h>
-#include "error.h"
+#include <inttypes.h>
 #include "stddef.h"
+
+#include "error.h"
+#include "i2c.h"
+
 #include "cdm7160.h"
 
+#define RST		0x00
+	#define REST	0
 
-rscs_cdm7160_sensor_t * rscs_cdm7160_init(addr){
-	rscs_sdcard_t * self = (rscs_sdcard_t*)malloc(sizeof(rscs_sdcard_t));
-	rscs_cdm7160_sensor_t* sensor = (rscs_cdm7160_sensor_t*)malloc(sizeof(rscs_cdm7160_sensor_t));
+#define CTL		0x01
+	#define CTL0	0
+	#define CTL1	1
+	#define CTL2 	2
+
+#define op(OP) error = OP; if(error != RSCS_E_NONE) goto end;
+
+static rscs_e _wreg(rscs_cdm7160_t* sensor, uint8_t reg, uint8_t data){
+	rscs_e error = RSCS_E_NONE;
+
+	op(rscs_i2c_start());
+	op(rscs_i2c_send_slaw(sensor->addr, rscs_i2c_slaw_write));
+	op(rscs_i2c_write_byte(reg));
+	op(rscs_i2c_write_byte(data));
+
+end:
+	rscs_i2c_stop();
+	return error;
+}
+
+static rscs_e _rreg(rscs_cdm7160_t* sensor, uint8_t reg, void* data, size_t datasize){
+	uint8_t* buf = (uint8_t*)data;
+	rscs_e error = RSCS_E_NONE;
+
+	op(rscs_i2c_start());
+	op(rscs_i2c_send_slaw(sensor->addr, rscs_i2c_slaw_write));
+	op(rscs_i2c_write_byte(reg));
+
+	op(rscs_i2c_start());
+	op(rscs_i2c_send_slaw(sensor->addr, rscs_i2c_slaw_read));
+	op(rscs_i2c_read(buf, datasize, 1));
+
+end:
+	rscs_i2c_stop();
+	return error;
+}
+
+rscs_cdm7160_t * rscs_cdm7160_init(rscs_cdm7160_address_t addr){
+	rscs_cdm7160_t* sensor = (rscs_cdm7160_t*)malloc(sizeof(rscs_cdm7160_t));
 	if(NULL == sensor) return sensor;
 
-	if(addr == LOW) sensor->addr = 0b1101000;
-	if(addr == HIGH) sensor->addr = 0b1101001;
+	if(addr == RSCS_CDM7160_ADDR_LOW) sensor->addr = 0b11010000;
+	else if(addr == RSCS_CDM7160_ADDR_HIGH) sensor->addr = 0b11010010;
 
 	return sensor;
 }
 
-
-rscs_e rscs_cdm7160_reset(rscs_cdm7160_sensor_t* sensor)
+rscs_e rscs_cdm7160_reset(rscs_cdm7160_t* sensor)
 {
-	error = rscs_i2c_start();
-	if(error != RSCS_E_NONE) goto end;
-	error = rscs_i2c_send_slaw(sensor->addr, rscs_i2c_slaw_write);
-	if(error != RSCS_E_NONE) goto end;
-	error = rscs_i2c_write_byte(0x00);
-	if(error != RSCS_E_NONE) goto end;
-	error = rscs_i2c_write_byte(0x01);
-	if(error != RSCS_E_NONE) goto end;
-
-	end:
-				rscs_i2c_stop();
-				return error;
+	return _wreg(sensor, RST, 1 << REST);
 };
 
-rscs_e rscs_cdm7160_mode_set(rscs_cdm7160_sensor_t* sensor, rscs_cdm7160_mode_t* mode)
+rscs_e rscs_cdm7160_mode_set(rscs_cdm7160_t* sensor, rscs_cdm7160_mode_t mode)
 {
-	error = rscs_i2c_start();
-	if(error != RSCS_E_NONE) goto end;
-	error = rscs_i2c_send_slaw(sensor->addr, rscs_i2c_slaw_write);
-	if(error != RSCS_E_NONE) goto end;
-	error = rscs_i2c_write_byte(0x01);
-	if(error != RSCS_E_NONE) goto end;
-	error = rscs_i2c_write_byte(mode);
-	if(error != RSCS_E_NONE) goto end;
-
-	end:
-			rscs_i2c_stop();
-			return error;
+	if(mode == RSCS_CDM7160_MODE_CONTINUOUS)
+		return _wreg(sensor, CTL, (1 << CTL2) | (1 << CTL2));
+	else if(mode == RSCS_CDM7160_MODE_SLEEP)
+		return _wreg(sensor, CTL, 0);
+	return RSCS_E_INVARG;
 };
 
-rscs_e rscs_cdm7160_read_CO2(rscs_cdm7160_sensor_t* sensor)
+rscs_e rscs_cdm7160_read_CO2(rscs_cdm7160_sensor_t* sensor, uint8_t* data)
 {
 	error = rscs_i2c_start();
 	if(error != RSCS_E_NONE) goto end;
