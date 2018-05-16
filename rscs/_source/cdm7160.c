@@ -21,7 +21,15 @@
 	#define CTL1	1
 	#define CTL2 	2
 
+#define ST1		0x02
+	#define BUSY	0x128
+#define DAL		0x03
+#define DAH		0x04
+#define HPA		0x09
+#define HIT		0x0A
+
 #define op(OP) error = OP; if(error != RSCS_E_NONE) goto end;
+#define ch(OP) error = OP; if(error != RSCS_E_NONE) return error;
 
 static rscs_e _wreg(rscs_cdm7160_t* sensor, uint8_t reg, uint8_t data){
 	rscs_e error = RSCS_E_NONE;
@@ -77,52 +85,28 @@ rscs_e rscs_cdm7160_mode_set(rscs_cdm7160_t* sensor, rscs_cdm7160_mode_t mode)
 	return RSCS_E_INVARG;
 };
 
-rscs_e rscs_cdm7160_read_CO2(rscs_cdm7160_sensor_t* sensor, uint8_t* data)
-{
-	error = rscs_i2c_start();
-	if(error != RSCS_E_NONE) goto end;
-	error = rscs_i2c_send_slaw(sensor->addr, rscs_i2c_slaw_read);
-	if(error != RSCS_E_NONE) goto end;
-	error = rscs_i2c_write_byte(0x03);
-	if(error != RSCS_E_NONE) goto end;
-	error = rscs_i2c_read(void * data_ptr, 2, true);
-	if(error != RSCS_E_NONE) goto end;
+//uint16_t temp;
+//rscs_cdm7160_read_CO2(sensor, &temp);
 
-	end:
-				rscs_i2c_stop();
-				return error;
+rscs_e rscs_cdm7160_read_CO2(rscs_cdm7160_t* sensor, uint16_t* CO2_raw_conc)
+{
+	rscs_e error = RSCS_E_NONE;
+
+	uint8_t flag;
+	ch(_rreg(sensor, ST1, flag, 1));
+
+	if((flag >> BUSY) & 1)
+		return _rreg(sensor, DAL, CO2_raw_conc, 2);
+
+	return RSCS_E_BUSY;
 };
 
-rscs_e rscs_cdm7160_write_pressure_corr(rscs_cdm7160_sensor_t* sensor, int pressure)
+rscs_e rscs_cdm7160_write_pressure_corr(rscs_cdm7160_t* sensor, uint8_t* press_coeff)
 {
-	error = rscs_i2c_start();
-	if(error != RSCS_E_NONE) goto end;
-	error = rscs_i2c_send_slaw(sensor->addr, rscs_i2c_slaw_write);
-	if(error != RSCS_E_NONE) goto end;
-	error = rscs_i2c_write_byte(0x09);
-	if(error != RSCS_E_NONE) goto end;
-	error = rscs_i2c_write_byte(pressure);
-	if(error != RSCS_E_NONE) goto end;
-
-		end:
-				rscs_i2c_stop();
-				return error;
+	return _wreg(sensor, HPA, press_coeff);
 };
 
-rscs_e rscs_cdm7160_write_altitude_corr(rscs_cdm7160_sensor_t* sensor, int altitude)
+rscs_e rscs_cdm7160_write_altitude_corr(rscs_cdm7160_t* sensor, uint8_t* alt_coeff)
 {
-	error = rscs_i2c_start();
-		if(error != RSCS_E_NONE) goto end;
-		error = rscs_i2c_send_slaw(sensor->addr, rscs_i2c_slaw_write);
-		if(error != RSCS_E_NONE) goto end;
-		error = rscs_i2c_write_byte(0x0A);
-		if(error != RSCS_E_NONE) goto end;
-		error = rscs_i2c_write_byte(altitude);
-		if(error != RSCS_E_NONE) goto end;
-
-		end:
-				rscs_i2c_stop();
-				return error;
+	return _wreg(sensor, HIT, alt_coeff);
 };
-
-
