@@ -22,7 +22,8 @@
 	#define CTL2 	2
 
 #define ST1		0x02
-	#define BUSY	0x128
+	#define BUSY	7
+
 #define DAL		0x03
 #define DAH		0x04
 #define HPA		0x09
@@ -65,8 +66,8 @@ rscs_cdm7160_t * rscs_cdm7160_init(rscs_cdm7160_address_t addr){
 	rscs_cdm7160_t* sensor = (rscs_cdm7160_t*)malloc(sizeof(rscs_cdm7160_t));
 	if(NULL == sensor) return sensor;
 
-	if(addr == RSCS_CDM7160_ADDR_LOW) sensor->addr = 0b11010000;
-	else if(addr == RSCS_CDM7160_ADDR_HIGH) sensor->addr = 0b11010010;
+	if(addr == RSCS_CDM7160_ADDR_LOW) sensor->addr = 0b1101000;
+	else if(addr == RSCS_CDM7160_ADDR_HIGH) sensor->addr = 0b1101001;
 
 	return sensor;
 }
@@ -79,34 +80,31 @@ rscs_e rscs_cdm7160_reset(rscs_cdm7160_t* sensor)
 rscs_e rscs_cdm7160_mode_set(rscs_cdm7160_t* sensor, rscs_cdm7160_mode_t mode)
 {
 	if(mode == RSCS_CDM7160_MODE_CONTINUOUS)
-		return _wreg(sensor, CTL, (1 << CTL2) | (1 << CTL2));
+		return _wreg(sensor, CTL, (1 << CTL2) | (1 << CTL1));
 	else if(mode == RSCS_CDM7160_MODE_SLEEP)
 		return _wreg(sensor, CTL, 0);
 	return RSCS_E_INVARG;
 };
 
-//uint16_t temp;
-//rscs_cdm7160_read_CO2(sensor, &temp);
-
-rscs_e rscs_cdm7160_read_CO2(rscs_cdm7160_t* sensor, uint16_t* CO2_raw_conc)
+rscs_e rscs_cdm7160_read(rscs_cdm7160_t* sensor, uint16_t* CO2_raw_conc)
 {
 	rscs_e error = RSCS_E_NONE;
 
 	uint8_t flag;
-	ch(_rreg(sensor, ST1, flag, 1));
+	ch(_rreg(sensor, ST1, &flag, 1));
 
-	if((flag >> BUSY) & 1)
+	if(((~flag) >> BUSY) & 1)
 		return _rreg(sensor, DAL, CO2_raw_conc, 2);
 
 	return RSCS_E_BUSY;
 };
 
-rscs_e rscs_cdm7160_write_pressure_corr(rscs_cdm7160_t* sensor, uint8_t* press_coeff)
+rscs_e rscs_cdm7160_write_pressure_corr(rscs_cdm7160_t* sensor, uint8_t press_coeff)
 {
 	return _wreg(sensor, HPA, press_coeff);
 };
 
-rscs_e rscs_cdm7160_write_altitude_corr(rscs_cdm7160_t* sensor, uint8_t* alt_coeff)
+rscs_e rscs_cdm7160_write_altitude_corr(rscs_cdm7160_t* sensor, uint8_t alt_coeff)
 {
 	return _wreg(sensor, HIT, alt_coeff);
 };

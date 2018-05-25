@@ -32,19 +32,18 @@ typedef struct {
 rscs_cdm7160_t* rscs_cdm7160_init(rscs_cdm7160_address_t);
 
 // Функция осуществляет программный reset устройства
-rscs_e rscs_cdm7160_reset(rscs_cdm7160_sensor_t);
+rscs_e rscs_cdm7160_reset(rscs_cdm7160_t*);
 
 // функция выбора режима работы датчика (постоянное измерение/спящий режим)
-rscs_e rscs_cdm7160_mode_set(rscs_cdm7160_sensor_t, rscs_cdm7160_mode_t);
+rscs_e rscs_cdm7160_mode_set(rscs_cdm7160_t*, rscs_cdm7160_mode_t);
 
 // Функция чтения показаний концентрации CO2
-rscs_e rscs_cdm7160_readCO2(rscs_cdm7160_sensor_t);
+rscs_e rscs_cdm7160_read(rscs_cdm7160_t*, uint16_t*);
 
 // Функция коррекции показаний с учётом атмосферного давления
-rscs_e rscs_cdm7160_write_pressure_corr(rscs_cdm7160_sensor_t, int pressure);
+rscs_e rscs_cdm7160_write_pressure_corr(rscs_cdm7160_t*, uint8_t press_coeff);
 
 // Функция коррекции показаний с учётом высоты
-rscs_e rscs_cdm7160_write_altitude_corr(rscs_cdm7160_sensor_t, int altitude);
-
+rscs_e rscs_cdm7160_write_altitude_corr(rscs_cdm7160_t*, uint8_t alt_coeff);
 
 #endif /* CDM7160_H_ */
