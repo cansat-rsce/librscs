@@ -14,11 +14,11 @@
 #include "../ina219.h"
 #include "../i2c.h"
 
+
 struct rscs_ina219_t
 {
 	uint8_t address;
 };
-
 
 static rscs_e _write_reg(rscs_ina219_t * device, uint8_t reg_addr, uint16_t reg_value)
 {
@@ -40,7 +40,7 @@ static rscs_e _write_reg(rscs_ina219_t * device, uint8_t reg_addr, uint16_t reg_
 	if (error != RSCS_E_NONE)
 		goto end;
 
-	error = rscs_i2c_write_byte(reg_value & 0x00FF);
+	error = rscs_i2c_write_byte(reg_value & 0xFF);
 	if (error != RSCS_E_NONE)
 		goto end;
 end:
@@ -92,9 +92,10 @@ rscs_ina219_t * rscs_ina219_init(uint8_t i2c_addr)
 {
 	rscs_ina219_t * retval = (rscs_ina219_t *)malloc(sizeof(rscs_ina219_t));
 	if (!retval)
-		return retval;
+		return NULL;
 
 	retval->address = i2c_addr;
+
 	return retval;
 }
 
@@ -107,8 +108,6 @@ void rscs_ina219_deinit(rscs_ina219_t * device)
 
 rscs_e rscs_ina219_start_single(rscs_ina219_t * device, rscs_ina219_channel_t mode)
 {
-	rscs_i2c_start();
-
 	rscs_e error;
 
 	switch (mode)
@@ -117,7 +116,8 @@ rscs_e rscs_ina219_start_single(rscs_ina219_t * device, rscs_ina219_channel_t mo
 	{
 		uint16_t config_reg;
 		error =_read_reg(device, 0x00, &config_reg);
-		config_reg |= 1;
+		config_reg &= ~((1<<INA_MODE1) | (1<<INA_MODE2) | (1<<INA_MODE3));
+		config_reg |= (1<<INA_MODE1) | (0<<INA_MODE2) | (0<<INA_MODE3);
 		error =_write_reg(device, 0x00, config_reg);
 		if (error != RSCS_E_NONE)
 			return error;
@@ -127,7 +127,8 @@ rscs_e rscs_ina219_start_single(rscs_ina219_t * device, rscs_ina219_channel_t mo
 	{
 		uint16_t config_reg;
 		error =_read_reg(device, 0x00, &config_reg);
-		config_reg |= 2;
+		config_reg &= ~((1<<INA_MODE1) | (1<<INA_MODE2) | (1<<INA_MODE3));
+		config_reg |= (0<<INA_MODE1) | (1<<INA_MODE2) | (0<<INA_MODE3);
 		error =_write_reg(device, 0x00, config_reg);
 		if (error != RSCS_E_NONE)
 					return error;
@@ -137,14 +138,14 @@ rscs_e rscs_ina219_start_single(rscs_ina219_t * device, rscs_ina219_channel_t mo
 	{
 		uint16_t config_reg;
 		error =_read_reg(device, 0x00, &config_reg);
-		config_reg |= 3;
+		config_reg &= ~((1<<INA_MODE1) | (1<<INA_MODE2) | (0<<INA_MODE3));
+		config_reg |= (1<<INA_MODE1) | (1<<INA_MODE2) | (0<<INA_MODE3);
 		error =_write_reg(device, 0x00, config_reg);
 		if (error != RSCS_E_NONE)
 					return error;
 	}break;
 	}
 
-	rscs_i2c_stop();
 	return RSCS_E_NONE;
 
 }
@@ -161,7 +162,8 @@ rscs_e rscs_ina219_start_continuous(rscs_ina219_t * device, rscs_ina219_channel_
 			error =_read_reg(device, 0x00, &config_reg);
 			if (error != RSCS_E_NONE)
 						return error;
-			config_reg |= 5;
+			config_reg &= ~((1<<INA_MODE1) | (0<<INA_MODE2) | (1<<INA_MODE3));
+			config_reg |= (1<<INA_MODE1) | (0<<INA_MODE2) | (1<<INA_MODE3);
 			error =_write_reg(device, 0x00, config_reg);
 			if (error != RSCS_E_NONE)
 						return error;
@@ -173,7 +175,8 @@ rscs_e rscs_ina219_start_continuous(rscs_ina219_t * device, rscs_ina219_channel_
 			error =_read_reg(device, 0x00, &config_reg);
 			if (error != RSCS_E_NONE)
 						return error;
-			config_reg |= 6;
+			config_reg &= ~((0<<INA_MODE1) | (1<<INA_MODE2) | (1<<INA_MODE3));
+			config_reg |= (0<<INA_MODE1) | (1<<INA_MODE2) | (0<<INA_MODE3);
 			error =_write_reg(device, 0x00, config_reg);
 			if (error != RSCS_E_NONE)
 						return error;
@@ -185,7 +188,8 @@ rscs_e rscs_ina219_start_continuous(rscs_ina219_t * device, rscs_ina219_channel_
 			error =_read_reg(device, 0x00, &config_reg);
 			if (error != RSCS_E_NONE)
 						return error;
-			config_reg |= 9;
+			config_reg &= ~((1<<INA_MODE1) | (1<<INA_MODE2) | (1<<INA_MODE3));
+			config_reg |= (1<<INA_MODE1) | (1<<INA_MODE2) | (1<<INA_MODE3);
 			error =_write_reg(device, 0x00, config_reg);
 			if (error != RSCS_E_NONE)
 						return error;
@@ -229,7 +233,7 @@ rscs_e rscs_ina219_read(rscs_ina219_t * device, rscs_ina219_channel_t channel, u
 	return RSCS_E_NONE;
 }
 
-rscs_e rscs_rscs_ina219_wait_single (rscs_ina219_t * device)
+rscs_e rscs_ina219_wait_single(rscs_ina219_t * device)
 {
 	rscs_e error;
 	uint16_t con_rdy;
@@ -248,17 +252,30 @@ rscs_e rscs_rscs_ina219_wait_single (rscs_ina219_t * device)
 	return RSCS_E_TIMEOUT;
 }
 
-rscs_e rscs_ina219_set_cal(rscs_ina219_t * device, uint8_t maxExpCur, uint8_t Rshunt)
+rscs_e rscs_ina219_set_cal(rscs_ina219_t * device, uint16_t calreg)
 {
 	rscs_e error;
-	uint32_t calVal;
 
-	calVal = (0.04096 * (1L<<15) * 1000)/(maxExpCur * Rshunt);
-
-	error = _write_reg(device, 0x05, calVal);
+	error = _write_reg(device, 0x05, calreg);
 	if(error != RSCS_E_NONE)
 		return error;
 
 	return RSCS_E_NONE;
 }
+
+rscs_e rscs_ina219_set_cfg(rscs_ina219_t * device, uint16_t cfgreg)
+{
+	rscs_e error;
+
+	error = _write_reg(device, 0x00, cfgreg);
+	if(error != RSCS_E_NONE)
+		return error;
+
+	return RSCS_E_NONE;
+}
+
+/*rscs_e rscs_ina_read_reg(rscs_ina219_t * device, uint8_t reg_addr, uint16_t * reg_value)
+{
+	return _read_reg(device, reg_addr, reg_value);
+}*/
 
