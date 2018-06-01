@@ -8,10 +8,10 @@
 #include <inttypes.h>
 #include "stddef.h"
 
-#include "error.h"
-#include "i2c.h"
+#include "../error.h"
+#include "../i2c.h"
 
-#include "cdm7160.h"
+#include "../cdm7160.h"
 
 #define RST		0x00
 	#define REST	0
@@ -31,6 +31,11 @@
 
 #define op(OP) error = OP; if(error != RSCS_E_NONE) goto end;
 #define ch(OP) error = OP; if(error != RSCS_E_NONE) return error;
+
+struct rscs_cdm7160_t {
+	uint8_t addr;
+}; // Объявление типа структуры для хранения дескриптора устройства
+
 
 static rscs_e _wreg(rscs_cdm7160_t* sensor, uint8_t reg, uint8_t data){
 	rscs_e error = RSCS_E_NONE;
@@ -68,6 +73,7 @@ rscs_cdm7160_t * rscs_cdm7160_init(rscs_cdm7160_address_t addr){
 
 	if(addr == RSCS_CDM7160_ADDR_LOW) sensor->addr = 0b1101000;
 	else if(addr == RSCS_CDM7160_ADDR_HIGH) sensor->addr = 0b1101001;
+	else abort();
 
 	return sensor;
 }

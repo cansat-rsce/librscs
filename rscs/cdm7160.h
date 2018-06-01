@@ -23,10 +23,8 @@ typedef enum{
 	RSCS_CDM7160_ADDR_LOW,
 } rscs_cdm7160_address_t; // Перечисление возможных адресов
 
-
-typedef struct {
-	uint8_t addr;
-} rscs_cdm7160_t; // Объявление типа структуры для хранения дескриптора устройства
+struct rscs_cdm7160_t;
+typedef struct rscs_cdm7160_t rscs_cdm7160_t;
 
 // Функция создаёт дескриптор устройства на шине
 rscs_cdm7160_t* rscs_cdm7160_init(rscs_cdm7160_address_t);
