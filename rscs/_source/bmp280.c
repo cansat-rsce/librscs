@@ -235,7 +235,7 @@ rscs_e rscs_bmp280_read(rscs_bmp280_descriptor_t * descr, int32_t * rawpress, in
 	*rawtemp = ((uint32_t)tmp[3] << 12) | ((uint32_t)tmp[4] << 4) | ((uint32_t)tmp[5] >> 4);
 
 end:
-	RSCS_DEBUG("BMP280: READ: returning %d\n", error);
+	//RSCS_DEBUG("BMP280: READ: returning %d\n", error);
 	return error;
 }
 
@@ -246,7 +246,7 @@ uint8_t rscs_bmp280_read_status(rscs_bmp280_descriptor_t * descr) {
 	OPERATION(descr->read_reg(descr, RSCS_BMP280_REG_STATUS, &status, 1));
 
 end:
-	RSCS_DEBUG("BMP280: READ: returning %d\n", error);
+	//RSCS_DEBUG("BMP280: READ: returning %d\n", error);
 	return status;
 }
 

@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <avr/io.h>
-#include <util/delay.h>
 
 #include "librscs_config.h"
 
@@ -21,6 +21,7 @@ struct rscs_sdcard
 	uint8_t cs_pin_mask;		// номер пина CS в порту
 
 	uint32_t timeout;			// таймаут для операций SD карты
+	uint32_t timespent;			// Потраченный таймаут для SD карты
 };
 
 #define SD_R1_IDLE (1 << 0)
@@ -49,7 +50,7 @@ rscs_sdcard_t * rscs_sd_init(volatile uint8_t * cs_ddr_reg,volatile uint8_t * cs
 	self->cs_ddr = cs_ddr_reg;
 	self->cs_port = cs_port_reg;
 	self->cs_pin_mask = cs_pin_mask;
-	self->timeout = 4000;
+	self->timeout = 10000;
 
 	// настраиваем cs пин на вывод
 	*self->cs_ddr |= (self->cs_pin_mask);
@@ -94,15 +95,26 @@ void rscs_sd_cs(rscs_sdcard_t * self, bool state)
 }
 
 
-void rscs_sd_write(rscs_sdcard_t * card, const void * buffer, size_t buffer_size)
+rscs_e rscs_sd_write(rscs_sdcard_t * card, const void * buffer, size_t buffer_size)
 {
+	if (card->timeout)
+		if (card->timespent++ > card->timeout)
+			return RSCS_E_TIMEOUT;
+
 	rscs_spi_write(buffer, buffer_size);
+
+	return RSCS_E_NONE;
 }
 
 
-void rscs_sd_read(rscs_sdcard_t * card, void * buffer, size_t buffer_size)
+rscs_e rscs_sd_read(rscs_sdcard_t * card, void * buffer, size_t buffer_size)
 {
+	if (card->timeout)
+		if (card->timespent++ > card->timeout)
+			return RSCS_E_TIMEOUT;
+
 	rscs_spi_read(buffer, buffer_size, 0xFF);
+	return RSCS_E_NONE;
 }
 
 
@@ -149,62 +161,52 @@ size_t rscs_sd_response_length(rscs_sd_resp_t resp)
 rscs_e rscs_sd_cmd(rscs_sdcard_t * self, rscs_sd_cmd_t cmd, uint32_t argument, void * response)
 {
 	const uint8_t * arg = (const uint8_t *)&argument;
+	rscs_e error = RSCS_E_NONE;
 
-	uint8_t data[] = { (uint8_t)((cmd & 0x3F) | 0x40), arg[3], arg[2], arg[1], arg[0], 0x95/*CRC*/};
-	// 0x95 - фиксированное значение CRC для CMD0, для которой без CRC никак. Для остальных CRC мы не испольуем
+	uint8_t data[] = { (uint8_t)((cmd & 0x3F) | 0x40), arg[3], arg[2], arg[1], arg[0], 0x00};
 	data[5] = rscs_crc7(data, 5);
-	rscs_sd_write(self, data, sizeof(data));
+	GOTO_END_IF_ERROR(rscs_sd_write(self, data, sizeof(data)));
 
 	rscs_sd_resp_t resp_type = rscs_sd_response_type(cmd);
 	size_t response_length = rscs_sd_response_length(resp_type);
 
 	uint8_t * volatile first_response_byte_ptr = (uint8_t*)response;
-	uint32_t timespent = 0;
+
 	while(1)
 	{
-		rscs_sd_read(self, first_response_byte_ptr, 1);
+		GOTO_END_IF_ERROR(rscs_sd_read(self, first_response_byte_ptr, 1));
 		if ((*first_response_byte_ptr & 0x80) == 0) // первый бит любого ответа должен быть равен 0
 			break;
 
 		// пока ответа нет - шина держится в единице (0xFF)
-		if (self->timeout)
-		{
-			_delay_us(1);
-			if (timespent++ > self->timeout)
-				return RSCS_E_TIMEOUT;
-		}
-
 	}
 
 	// дочитываем остальное
-	rscs_sd_read(self, first_response_byte_ptr+1, response_length-1);
+	GOTO_END_IF_ERROR(rscs_sd_read(self, first_response_byte_ptr+1, response_length-1));
 
-	return RSCS_E_NONE;
+end:
+	return error;
 }
 
 
 rscs_e rscs_sd_wait_busy(rscs_sdcard_t * self)
 {
+	rscs_e error = RSCS_E_NONE;
 	uint8_t buffer;
-	uint32_t timespent = 0;
+
 	do {
-		rscs_sd_read(self, &buffer, 1);
+		GOTO_END_IF_ERROR(rscs_sd_read(self, &buffer, 1));
+	} while(0x00 == buffer);
 
-		_delay_us(1);
-		if (self->timeout)
-		{
-			timespent++;
-			if (timespent > self->timeout)
-				return RSCS_E_TIMEOUT;
-		}
-	}while(0x00 == buffer);
-
-	return RSCS_E_NONE;
+end:
+	return error;
 }
 
 
 rscs_e rscs_sd_startup(rscs_sdcard_t * self)
 {
+	self->timespent = 0;
+
 	rscs_e error = RSCS_E_NONE;
 	rscs_sdcard_type_t card_type;
 
@@ -212,7 +214,7 @@ rscs_e rscs_sd_startup(rscs_sdcard_t * self)
 	rscs_sd_cs(self, false);
 	const uint8_t dummy = 0xFF;
 	for (uint_fast8_t i = 0; i < 20; i++)
-		rscs_sd_write(self, &dummy, 1);
+		GOTO_END_IF_ERROR(rscs_sd_write(self, &dummy, 1));
 
 	// Переключаем SPI на высокую скорость
 	rscs_sd_spi_setup();
@@ -233,7 +235,7 @@ rscs_e rscs_sd_startup(rscs_sdcard_t * self)
 	// ошибки игнорируем, тк эту команду понимают только некоторые SD карты
 	// заодно и выясним - какой тип карточки у нас
 	uint8_t r7_resp[5];
-	rscs_sd_cmd(self, RSCS_SD_CMD8, 0x000001AA, r7_resp); // 0xAA - спец обязательный паттерн. 0x01 - команда на проверку питания
+	GOTO_END_IF_ERROR(rscs_sd_cmd(self, RSCS_SD_CMD8, 0x000001AA, r7_resp)); // 0xAA - спец обязательный паттерн. 0x01 - команда на проверку питания
 	if (r7_resp[0] & SD_R1_ILLEGAL_CMD) // карта не поняла команду - это SD1
 		card_type = RSCS_SD_TYPE_SD1;
 	else if (0xAA == r7_resp[4]) // карта поняла нашу команду - это SD2 карта
@@ -243,6 +245,7 @@ rscs_e rscs_sd_startup(rscs_sdcard_t * self)
 		error = RSCS_E_INVRESP;
 		goto end;
 	}
+
 
 	// долбим карту командами не включение, пока ей не надоест
 	// если это SDHC, она ждет от нас ACMD41
@@ -273,7 +276,6 @@ rscs_e rscs_sd_startup(rscs_sdcard_t * self)
 		}
 	} while (r1_resp != 0x00);
 
-
 	// если это карта, которая не понимает ACMD41 и idle бит все еще стоит - пробуем запустить её через CMD1
 	while (r1_resp != 0x00)
 	{
@@ -287,6 +289,7 @@ rscs_e rscs_sd_startup(rscs_sdcard_t * self)
 
 	// все, карта готова
 end:
+	printf("sd_startup_leave, err = %d\n", error);
 	rscs_sd_cs(self, false);
 	return error;
 }
@@ -294,6 +297,7 @@ end:
 
 rscs_e rscs_sd_block_write(rscs_sdcard_t * self, size_t offset, const void * block_start, size_t block_count)
 {
+	self->timespent = 0;
 	rscs_e error = RSCS_E_NONE;
 	const uint16_t dummy = 0xFFFF;
 	// определяемся с командой и токенами - запись нескольких блоков или одного
@@ -312,22 +316,24 @@ rscs_e rscs_sd_block_write(rscs_sdcard_t * self, size_t offset, const void * blo
 		goto end;
 	}
 	// теперь отправляем специальный "пропускающий" байт
-	rscs_sd_write(self, &dummy, 1);
+	GOTO_END_IF_ERROR(rscs_sd_write(self, &dummy, 1));
 
 	for (size_t i = 0; i < block_count; i++)
 	{
+		// сбрасываем таймаут для каждого из блоков
+		self->timespent = 0;
 		if (i != 0)
 			GOTO_END_IF_ERROR(rscs_sd_wait_busy(self)); // ждем пока карта освободиться
 
 		// заголовок пакета данных
-		rscs_sd_write(self, &packet_token, 1);
+		GOTO_END_IF_ERROR(rscs_sd_write(self, &packet_token, 1));
 		// сами данные
-		rscs_sd_write(self, (uint8_t*)block_start + 512*i, 512);
+		GOTO_END_IF_ERROR(rscs_sd_write(self, (uint8_t*)block_start + 512*i, 512));
 		// контрольная сумма
-		rscs_sd_write(self, &dummy, 2);
+		GOTO_END_IF_ERROR(rscs_sd_write(self, &dummy, 2));
 
 		// sd карта отвечает на пакет - слушаем
-		rscs_sd_read(self, &resp, 1);
+		GOTO_END_IF_ERROR(rscs_sd_read(self, &resp, 1));
 		resp &= SD_DATA_RESP_MASK;
 		if (resp != SD_DATA_RESP_DATA_ACCEPTED)
 		{
@@ -341,13 +347,13 @@ rscs_e rscs_sd_block_write(rscs_sdcard_t * self, size_t offset, const void * blo
 		GOTO_END_IF_ERROR(rscs_sd_wait_busy(self));
 		// заканчиваем - отправляем соответсвующий токен
 		const uint8_t stop_tran_token = SD_TOKEN_NO_MORE_DATA;
-		rscs_sd_write(self, &stop_tran_token, 1);
+		GOTO_END_IF_ERROR(rscs_sd_write(self, &stop_tran_token, 1));
 		// нужно прогнать еще один пропускающий байт, чтобы карта вошла в состояние busy
 		// чтобы начать запись на самой sd карте
 		// нужно отправить еще хотябы один байт по SPI в состоянии busy
 		// (согласно статье http://elm-chan.org/docs/mmc/mmc_e.html)
 		// поэтому отправляем сразу два байта
-		rscs_sd_write(self, &dummy, 2);
+		GOTO_END_IF_ERROR(rscs_sd_write(self, &dummy, 2));
 	}
 
 	//sd_wait_busy();
@@ -360,6 +366,7 @@ end:
 
 rscs_e rscs_sd_block_read(rscs_sdcard_t * self, size_t offset, void * block, size_t block_count)
 {
+	self->timespent = 0;
 	rscs_e error = RSCS_E_NONE;
 
 	// определяемся с командой на чтение в зависимости от количества блоков
@@ -383,7 +390,7 @@ rscs_e rscs_sd_block_read(rscs_sdcard_t * self, size_t offset, void * block, siz
 		uint8_t token;
 		do
 		{
-			rscs_sd_read(self, &token, 1);
+			GOTO_END_IF_ERROR(rscs_sd_read(self, &token, 1));
 		} while (token == 0xFF);
 
 		// проверяем токен
@@ -394,18 +401,17 @@ rscs_e rscs_sd_block_read(rscs_sdcard_t * self, size_t offset, void * block, siz
 		}
 
 		// читаем сам блок
-		rscs_sd_read(self,(uint8_t*)block + 512*i, 512);
+		GOTO_END_IF_ERROR(rscs_sd_read(self,(uint8_t*)block + 512*i, 512));
 
 		// читаем CRC
 		uint16_t crc;
-		rscs_sd_read(self, &crc, 2);
-
+		GOTO_END_IF_ERROR(rscs_sd_read(self, &crc, 2));
 	}
 
 	if (block_count > 1)
 	{
 		// горшочек - не вари. Засылаем спеиальную команду на остановку
-		rscs_sd_cmd(self, RSCS_SD_CMD12, 0x00, &resp_r1);
+		GOTO_END_IF_ERROR(rscs_sd_cmd(self, RSCS_SD_CMD12, 0x00, &resp_r1));
 		if (resp_r1 != 0x00)
 		{
 			error = RSCS_E_INVRESP;
@@ -417,7 +423,7 @@ rscs_e rscs_sd_block_read(rscs_sdcard_t * self, size_t offset, void * block, siz
 	// когда блоки пишутся, нужно отправить хотябы один байт, чтобы запись реально пошла
 	// может быть с чтением такая же ерунда?
 	uint8_t dummy;
-	rscs_sd_read(self, &dummy, 1);
+	GOTO_END_IF_ERROR(rscs_sd_read(self, &dummy, 1));
 	//sd_wait_busy();
 
 end:
