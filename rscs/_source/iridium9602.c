@@ -16,7 +16,8 @@ typedef enum{
 	AT,
 	SBDIX,
 	SBDWBS,
-	SBDWBD
+	SBDWBD,
+	SBDWT
 } command;
 
 struct rscs_iridium_t{
@@ -87,7 +88,7 @@ rscs_e rscs_iridium_check(rscs_iridium_t* iridium){
 }
 
 
-rscs_e rscs_iridium9602_write(rscs_iridium_t* iridium, void* data, size_t datasize){
+rscs_e rscs_iridium9602_write_bytes(rscs_iridium_t* iridium, void* data, size_t datasize){
 	switch(iridium->last){
 	case AT: return RSCS_E_INVARG;
 	case NOP:
@@ -131,7 +132,52 @@ rscs_e rscs_iridium9602_write(rscs_iridium_t* iridium, void* data, size_t datasi
 
 		return RSCS_E_NONE;
 	}
+		break;
+	}
+
+	if(rscs_time_get() - iridium->time > RSCS_IRIDIUM9602_TIMEOUT_MS){
+		iridium->carret = 0;
+		iridium->last = NOP;
+
+		return RSCS_E_TIMEOUT;
+	}
+
+	return RSCS_E_BUSY;
+}
+
+rscs_e rscs_iridium9602_write_text(rscs_iridium_t* iridium, char* str){
+	switch(iridium->last){
+	case AT: case SBDWBS: case SBDWBD: return RSCS_E_INVARG;
+	case NOP:
+	{
+		iridium->last = SBDWT;
+
+		char buf[strlen(str) + 14];
+		sprintf(buf, "AT+SBDWT=%s\r\n", str);
+		rscs_uart_write(iridium->uart, buf, strlen(buf));
+
+		iridium->time = rscs_time_get();
+	}
 		//break;
+	case SBDWT:
+	{
+		RETIFE(_await(iridium, "OK", "\r\n", NULL));
+		iridium->last = SBDIX;
+
+		char buf[] = "AT+SBDIX\r\n";
+		rscs_uart_write(iridium->uart, buf, strlen(buf));
+
+		iridium->time = rscs_time_get();
+	}
+		//break;
+	case SBDIX:
+	{
+		RETIFE(_await(iridium, "OK", "\r\n", NULL));
+		iridium->last = NOP;
+
+		return RSCS_E_NONE;
+	}
+		break;
 	}
 
 	if(rscs_time_get() - iridium->time > RSCS_IRIDIUM9602_TIMEOUT_MS){

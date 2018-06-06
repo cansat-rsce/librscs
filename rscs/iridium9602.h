@@ -25,7 +25,16 @@ rscs_e rscs_iridium_check(rscs_iridium_t* iridium);
  * окончание работы функции и до того момента вызов других функций данного модуля -
  * на свой страх и риск.
  */
-rscs_e rscs_iridium9602_write(rscs_iridium_t* iridium, void* data, size_t datasize);
+rscs_e rscs_iridium9602_write_bytes(rscs_iridium_t* iridium, void* data, size_t datasize);
+
+/* Послыка текста через иридиум.
+ * Последовательно посылает команды AT+SBDWT и AT+SBDIX.
+ * Ожидание неблокирующие, но ВАЖНО: данная функция будет возвращать
+ * RSCS_E_BUSY пока работает. Возврат RSCS_E_NONE или другой ошибки -
+ * окончание работы функции и до того момента вызов других функций данного модуля -
+ * на свой страх и риск.
+ */
+rscs_e rscs_iridium9602_write_text(rscs_iridium_t* iridium, char* str);
 
 /* Деинициализация иридиума */
 void rscs_iridium9602_deinit(rscs_iridium_t* iridium);
