@@ -232,6 +232,7 @@ void rscs_nrf24l01_set_config(rscs_nrf24l01_config_t* set, rscs_nrf24l01_bus_t *
 
 	if(set->config.pwr_up) _delay_us(135);
 	if(set->config.prim_rx) chip_en(bus);
+	else chip_dis(bus);
 }
 
 
@@ -302,6 +303,7 @@ uint8_t rscs_nrf24l01_write(rscs_nrf24l01_bus_t * bus, void* data, size_t size){
 }
 
 uint8_t rscs_nrf24l01_read(rscs_nrf24l01_bus_t * bus, void* data){
+	if(!(_rreg(STATUS, bus) & (1 << RX_DR))) return 0;
 	spi_start(bus);
 
 	spi_ex(bus, R_RX_PL_WID);
@@ -339,7 +341,7 @@ rscs_nrf24l01_status_t* rscs_nrf24l01_get_status(rscs_nrf24l01_bus_t * bus){
 }
 
 
-void rscs_nrf24l01_flash(rscs_nrf24l01_bus_t * bus){
+void rscs_nrf24l01_flush(rscs_nrf24l01_bus_t * bus){
 	_wreg(STATUS, _rreg(STATUS, bus), bus);
 	_command(FL_TX, bus);
 	_command(FL_RX, bus);
@@ -363,6 +365,10 @@ rscs_nrf24l01_bus_t * rscs_nrf24l01_init(uint8_t (*exchange)(uint8_t byte),
 	retval->CEMASK = (1 << cepin);
 
 	return retval;
+}
+
+void rscs_nrf24l01_deinit(rscs_nrf24l01_bus_t* nrf){
+	free(nrf);
 }
 
 void info_pipe(rscs_nrf24l01_pipe_config_t* retval){
