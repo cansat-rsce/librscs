@@ -100,6 +100,29 @@ rscs_e rscs_iridium9602_write(rscs_iridium_t* iridium, void* data, size_t datasi
 
 		for(char* lex = strtok(str, "\r\n"); lex != NULL; lex = strtok(NULL, "\r\n")){
 			if(strcmp(lex, "OK") == 0) {
+				char buf[] = "AT+SBDIX\r\n";
+				rscs_uart_write(iridium->uart, buf, strlen(buf));
+
+				iridium->carret = 0;
+				iridium->last = SBDIX;
+			}
+			if(strcmp(lex, "ERROR") == 0){
+				iridium->carret = 0;
+				iridium->last = NOP;
+
+				return RSCS_E_INVARG;
+			}
+		}
+	}
+		break;
+	case SBDIX:
+		accumulate(iridium);
+
+		char str[iridium->carret + 1];
+		strcpy(str, iridium->buffer);
+
+		for(char* lex = strtok(str, "\r\n"); lex != NULL; lex = strtok(NULL, "\r\n")){
+			if(strcmp(lex, "OK") == 0) {
 				iridium->carret = 0;
 				iridium->last = NOP;
 
@@ -112,9 +135,6 @@ rscs_e rscs_iridium9602_write(rscs_iridium_t* iridium, void* data, size_t datasi
 				return RSCS_E_INVARG;
 			}
 		}
-	}
-		break;
-	case SBDIX:
 		break;
 	}
 	return RSCS_E_BUSY;
