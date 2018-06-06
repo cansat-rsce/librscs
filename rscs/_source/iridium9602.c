@@ -6,6 +6,8 @@
 #include "stdext/stdio.h"
 
 #include "error.h"
+#include "timeservice.h"
+
 #include "uart.h"
 #include "iridium9602.h"
 
@@ -22,9 +24,10 @@ struct rscs_iridium_t{
 	char buffer[RSCS_IRIDIUM9602_BUFFER_SIZE];
 	size_t carret;
 	command last;
+	uint32_t time;
 };
 
-static void accumulate(rscs_iridium_t* iridium){
+static void _accumulate(rscs_iridium_t* iridium){
 	uint8_t readed;
 	while(0 != (readed = rscs_uart_read_some(iridium->uart, iridium->buffer + iridium->carret, sizeof(iridium->buffer) - iridium->carret - 1))){
 		iridium->carret += readed;
@@ -32,99 +35,16 @@ static void accumulate(rscs_iridium_t* iridium){
 	iridium->buffer[iridium->carret] = 0;
 }
 
-rscs_e rscs_iridium9602_write(rscs_iridium_t* iridium, void* data, size_t datasize){
-	switch(iridium->last){
-	case NOP:
-	{
-		char buf[5];
-		sprintf(buf, "AT\r\n");
-		rscs_uart_write(iridium->uart, buf, strlen(buf));
-		iridium->last = AT;
-	}
-		break;
-	case AT:
-	{
-		accumulate(iridium);
+static rscs_e _await(rscs_iridium_t* iridium, const char* trigger, const char* delim, char* previos){
+	if(previos == NULL){
+		_accumulate(iridium);
 
 		char str[iridium->carret + 1];
 		strcpy(str, iridium->buffer);
 
-		for(char* lex = strtok(str, "\r\n"); lex != NULL; lex = strtok(NULL, "\r\n")){
-			if(strcmp(lex, "OK") == 0) {
-				char buf[18];
-				sprintf(buf, "AT+SBDWB=%d\r\n", datasize);
-				rscs_uart_write(iridium->uart, buf, strlen(buf));
-
+		for(char* lex = strtok(str, delim); lex != NULL; lex = strtok(NULL, delim)){
+			if(strcmp(lex, trigger) == 0) {
 				iridium->carret = 0;
-				iridium->last = SBDWBS;
-			}
-			if(strcmp(lex, "ERROR") == 0){
-				iridium->carret = 0;
-				iridium->last = NOP;
-
-				return RSCS_E_INVARG;
-			}
-		}
-	}
-		break;
-	case SBDWBS:
-	{
-		accumulate(iridium);
-
-		char str[iridium->carret + 1];
-		strcpy(str, iridium->buffer);
-
-		for(char* lex = strtok(str, "\r\n"); lex != NULL; lex = strtok(NULL, "\r\n")){
-			if(strcmp(lex, "READY") == 0) {
-				rscs_uart_write(iridium->uart, data, datasize);
-				rscs_uart_write(iridium->uart, "\r\n", 2);
-
-				iridium->carret = 0;
-				iridium->last = SBDWBD;
-			}
-			if(strcmp(lex, "ERROR") == 0){
-				iridium->carret = 0;
-				iridium->last = NOP;
-
-				return RSCS_E_INVARG;
-			}
-		}
-	}
-		break;
-	case SBDWBD:
-	{
-		accumulate(iridium);
-
-		char str[iridium->carret + 1];
-		strcpy(str, iridium->buffer);
-
-		for(char* lex = strtok(str, "\r\n"); lex != NULL; lex = strtok(NULL, "\r\n")){
-			if(strcmp(lex, "OK") == 0) {
-				char buf[] = "AT+SBDIX\r\n";
-				rscs_uart_write(iridium->uart, buf, strlen(buf));
-
-				iridium->carret = 0;
-				iridium->last = SBDIX;
-			}
-			if(strcmp(lex, "ERROR") == 0){
-				iridium->carret = 0;
-				iridium->last = NOP;
-
-				return RSCS_E_INVARG;
-			}
-		}
-	}
-		break;
-	case SBDIX:
-		accumulate(iridium);
-
-		char str[iridium->carret + 1];
-		strcpy(str, iridium->buffer);
-
-		for(char* lex = strtok(str, "\r\n"); lex != NULL; lex = strtok(NULL, "\r\n")){
-			if(strcmp(lex, "OK") == 0) {
-				iridium->carret = 0;
-				iridium->last = NOP;
 
 				return RSCS_E_NONE;
 			}
@@ -132,11 +52,95 @@ rscs_e rscs_iridium9602_write(rscs_iridium_t* iridium, void* data, size_t datasi
 				iridium->carret = 0;
 				iridium->last = NOP;
 
-				return RSCS_E_INVARG;
+				return RSCS_E_INVRESP;
 			}
 		}
+	}
+	else{
+
+	}
+	return RSCS_E_BUSY;
+}
+
+#define RETIFE(OP) rscs_e error = OP; if(error) return error
+
+rscs_e rscs_iridium_check(rscs_iridium_t* iridium){
+	switch(iridium->last){
+	case SBDIX: case SBDWBD: case SBDWBS: return RSCS_E_INVARG;
+	case NOP:
+	{
+		char buf[] = "AT\r\n";
+		rscs_uart_write(iridium->uart, buf, strlen(buf));
+		iridium->last = AT;
+	}
+		break;
+	case AT:
+	{
+		RETIFE(_await(iridium, "OK", "\r\n", NULL));
+		iridium->last = NOP;
+
+		return RSCS_E_NONE;
+	}
 		break;
 	}
+	return RSCS_E_BUSY;
+}
+
+
+rscs_e rscs_iridium9602_write(rscs_iridium_t* iridium, void* data, size_t datasize){
+	switch(iridium->last){
+	case AT: return RSCS_E_INVARG;
+	case NOP:
+	{
+		iridium->last = SBDWBS;
+
+		char buf[20];
+		sprintf(buf, "AT+SBDWB=%d\r\n", datasize);
+		rscs_uart_write(iridium->uart, buf, strlen(buf));
+
+		iridium->time = rscs_time_get();
+	}
+		//break;
+	case SBDWBS:
+	{
+		RETIFE(_await(iridium, "READY", "\r\n", NULL));
+		iridium->last = SBDWBD;
+
+		rscs_uart_write(iridium->uart, data, datasize);
+		char buf[] = "\r\n";
+		rscs_uart_write(iridium->uart, buf, strlen(buf));
+
+		iridium->time = rscs_time_get();
+	}
+		break;
+	case SBDWBD:
+	{
+		RETIFE(_await(iridium, "OK", "\r\n", NULL));
+		iridium->last = SBDIX;
+
+		char buf[] = "AT+SBDIX\r\n";
+		rscs_uart_write(iridium->uart, buf, strlen(buf));
+
+		iridium->time = rscs_time_get();
+	}
+		//break;
+	case SBDIX:
+	{
+		RETIFE(_await(iridium, "OK", "\r\n", NULL));
+		iridium->last = NOP;
+
+		return RSCS_E_NONE;
+	}
+		//break;
+	}
+
+	if(rscs_time_get() - iridium->time > RSCS_IRIDIUM9602_TIMEOUT_MS){
+		iridium->carret = 0;
+		iridium->last = NOP;
+
+		return RSCS_E_TIMEOUT;
+	}
+
 	return RSCS_E_BUSY;
 }
 
@@ -162,9 +166,16 @@ rscs_iridium_t* rscs_iridium9602_init(rscs_uart_id_t uid){
 	retval->uart = uart;
 	retval->carret = 0;
 	retval->last = NOP;
-	//stdout = stdin = rscs_make_uart_stream(retval->uart);
+
+	rscs_time_init();
 
 	return retval;
+}
+
+void rscs_iridium9602_deinit(rscs_iridium_t* iridium){
+	rscs_uart_deinit(iridium->uart);
+
+	free(iridium);
 }
 
 
