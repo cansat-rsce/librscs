@@ -3,6 +3,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "librscs_config.h"
+
 #include "stdext/stdio.h"
 
 #include "error.h"

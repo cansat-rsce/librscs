@@ -3,9 +3,6 @@
 
 typedef struct rscs_iridium_t rscs_iridium_t;
 
-#define RSCS_IRIDIUM9602_BUFFER_SIZE 64
-#define RSCS_IRIDIUM9602_TIMEOUT_MS 30000
-
 /* Инициализация иридиума. */
 rscs_iridium_t* rscs_iridium9602_init(rscs_uart_id_t uid);
 
