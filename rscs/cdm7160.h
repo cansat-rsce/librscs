@@ -26,7 +26,7 @@ typedef enum{
 struct rscs_cdm7160_t;
 typedef struct rscs_cdm7160_t rscs_cdm7160_t;
 
-// Функция создаёт дескриптор устройства на шине
+// Функция создаёт дескриптор устройства
 rscs_cdm7160_t* rscs_cdm7160_init(rscs_cdm7160_address_t);
 
 // Функция осуществляет программный reset устройства
@@ -43,5 +43,8 @@ rscs_e rscs_cdm7160_write_pressure_corr(rscs_cdm7160_t*, uint8_t press_coeff);
 
 // Функция коррекции показаний с учётом высоты
 rscs_e rscs_cdm7160_write_altitude_corr(rscs_cdm7160_t*, uint8_t alt_coeff);
+
+// Функция деинициализации дескриптора
+void rscs_cdm7160_deinit(rscs_cdm7160_t* sensor);
 
 #endif /* CDM7160_H_ */
