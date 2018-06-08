@@ -69,7 +69,7 @@ end:
 
 rscs_cdm7160_t * rscs_cdm7160_init(rscs_cdm7160_address_t addr){
 	rscs_cdm7160_t* sensor = (rscs_cdm7160_t*)malloc(sizeof(rscs_cdm7160_t));
-	if(NULL == sensor) return sensor;
+	if(sensor == NULL) return NULL;
 
 	if(addr == RSCS_CDM7160_ADDR_LOW) sensor->addr = 0b1101000;
 	else if(addr == RSCS_CDM7160_ADDR_HIGH) sensor->addr = 0b1101001;
@@ -114,3 +114,7 @@ rscs_e rscs_cdm7160_write_altitude_corr(rscs_cdm7160_t* sensor, uint8_t alt_coef
 {
 	return _wreg(sensor, HIT, alt_coeff);
 };
+
+void rscs_cdm7160_deinit(rscs_cdm7160_t* sensor){
+	free(sensor);
+}
