@@ -322,11 +322,7 @@ uint8_t rscs_nrf24l01_write(rscs_nrf24l01_bus_t * bus, void* data, size_t size){
 
 		uint32_t sended = rscs_time_get();
 
-		while(!(
-				( _rreg(STATUS, bus) & ((1 << TX_DS) | (1 << MAX_RT)) ) |
-				( _rreg(FIFO_STATUS, bus) & (1 << TX_EMPTY) )
-				)
-				){
+		while(!( _rreg(FIFO_STATUS, bus) & (1 << TX_EMPTY))){
 			if((rscs_time_get() - sended) * 1000 > bus->timeout){
 				break;
 			}
@@ -343,8 +339,7 @@ uint8_t rscs_nrf24l01_read(rscs_nrf24l01_bus_t * bus, void* data){
 	uint8_t* buf = (uint8_t*)data;
 	size_t readed = 0;
 
-	while((_rreg(STATUS, bus) & (1 << RX_DR))
-			&& !(_rreg(FIFO_STATUS, bus) & (1 << RX_EMPTY))){
+	while(!(_rreg(FIFO_STATUS, bus) & (1 << RX_EMPTY))){
 		spi_start(bus);
 
 		spi_ex(bus, R_RX_PL_WID);
