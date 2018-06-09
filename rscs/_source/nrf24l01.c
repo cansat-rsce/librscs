@@ -389,7 +389,7 @@ void rscs_nrf24l01_deinit(rscs_nrf24l01_bus_t* nrf){
 	free(nrf);
 }
 
-void info_pipe(rscs_nrf24l01_pipe_config_t retval){
+void rscs_nrf24l01_info_pipe(rscs_nrf24l01_pipe_config_t retval){
 	printf("\n#########   NRF24L01 PIPE CONFIG DUMP   #########\n");
 	printf("num %d\n",retval.num);
 	printf("en %d\n",retval.en);
@@ -399,7 +399,7 @@ void info_pipe(rscs_nrf24l01_pipe_config_t retval){
 	printf("######################################\n");
 }
 
-void info_nrf(rscs_nrf24l01_config_t retval){
+void rscs_nrf24l01_info_nrf(rscs_nrf24l01_config_t retval){
 	printf("\n#########   NRF24L01 CONFIG DUMP   #########\n");
 	printf("CONFIG\n");
 	printf("	rx_dr %d \n", retval.config.rx_dr);
@@ -436,7 +436,7 @@ void info_nrf(rscs_nrf24l01_config_t retval){
 	printf("######################################\n");
 }
 
-void info_st(rscs_nrf24l01_status_t retval){
+void rscs_nrf24l01_info_st(rscs_nrf24l01_status_t retval){
 	printf("\n#########   NRF24L01 STATUS DUMP  #########\n");
 	printf("max_rt %d\n", retval.max_rt);
 	printf("rx_dr %d\n", retval.rx_dr);
@@ -446,9 +446,7 @@ void info_st(rscs_nrf24l01_status_t retval){
 	printf("######################################\n");
 }
 
-#include <string.h>
-
-uint8_t test(rscs_nrf24l01_bus_t * nrf1){
+void rscs_nrf24l01_test(rscs_nrf24l01_bus_t * nrf1, bool prx){
 	rscs_nrf24l01_config_t set;
 	rscs_nrf24l01_get_config(&set, nrf1);
 	set.config.crc0 = 0;
@@ -457,7 +455,7 @@ uint8_t test(rscs_nrf24l01_bus_t * nrf1){
 	set.config.rx_dr = 0;
 	set.config.tx_ds = 0;
 	set.config.pwr_up = 1;
-	set.config.prim_rx = 1;
+	set.config.prim_rx = prx;
 
 	set.feature.en_ack_pay = 1;
 	set.feature.en_dpl = 1;
@@ -472,15 +470,15 @@ uint8_t test(rscs_nrf24l01_bus_t * nrf1){
 
 	set.setup_aw.aw = 3;
 
-	set.setup_retr.arc = 0;
-	set.setup_retr.ard = 0;
+	set.setup_retr.arc = 2;
+	set.setup_retr.ard = 2;
 
 	set.tx.addr = 0x1122334455;
 
-	info_nrf(set);
+	rscs_nrf24l01_info_nrf(set);
 	rscs_nrf24l01_set_config(set, nrf1);
 	rscs_nrf24l01_get_config(&set, nrf1);
-	info_nrf(set);
+	rscs_nrf24l01_info_nrf(set);
 
 	rscs_nrf24l01_pipe_config_t pipe;
 	pipe.num = 0;
@@ -491,14 +489,14 @@ uint8_t test(rscs_nrf24l01_bus_t * nrf1){
 	pipe.pw = 0;
 	pipe.rx_addr = 0x1122334455;
 
-	info_pipe(pipe);
+	rscs_nrf24l01_info_pipe(pipe);
 	rscs_nrf24l01_set_pipe_config(pipe, nrf1);
 	rscs_nrf24l01_get_pipe_config(&pipe, nrf1);
-	info_pipe(pipe);
+	rscs_nrf24l01_info_pipe(pipe);
 
 	rscs_nrf24l01_status_t status;
 	rscs_nrf24l01_get_status(&status, nrf1);
-	info_st(status);
+	rscs_nrf24l01_info_st(status);
 
 	char f[] = "flush";
 	char c[] = "config";
@@ -514,18 +512,18 @@ uint8_t test(rscs_nrf24l01_bus_t * nrf1){
 		printf("%s\n", data);
 		if(!strcmp(data, c)) {
 			rscs_nrf24l01_get_config(&set, nrf1);
-			info_nrf(set);
+			rscs_nrf24l01_info_nrf(set);
 		}
 		if(!strcmp(data, s)) {
 			rscs_nrf24l01_get_status(&status, nrf1);
-			info_st(status);
+			rscs_nrf24l01_info_st(status);
 		}
 		if(!strcmp(data, p)){
 			int num;
 			scanf("%d", &num);
 			pipe.num = num;
 			rscs_nrf24l01_get_pipe_config(&pipe, nrf1);
-			info_pipe(pipe);
+			rscs_nrf24l01_info_pipe(pipe);
 		}
 		if(!strcmp(data, f)){
 			_wreg(STATUS, _rreg(STATUS, nrf1), nrf1);
@@ -548,8 +546,6 @@ uint8_t test(rscs_nrf24l01_bus_t * nrf1){
 			printf("Writed[%d]: %s\n", rscs_nrf24l01_write(nrf1, get, size), get);
 		}
 	}
-
-	return 0;
 }
 
 
