@@ -71,9 +71,9 @@ void rscs_sd_set_timeout(rscs_sdcard_t * self, uint32_t timeout_us);
 // Управление линией CS SD карты. True - активна. False - пассивна
 void rscs_sd_cs(rscs_sdcard_t * self, bool state);
 // передача данных SD карте по SPI
-void rscs_sd_write(rscs_sdcard_t * self, const void * buffer, size_t buffer_size);
+rscs_e rscs_sd_write(rscs_sdcard_t * self, const void * buffer, size_t buffer_size);
 // прием данных от SD карты по SPI
-void rscs_sd_read(rscs_sdcard_t * self, void * buffer, size_t buffer_size);
+rscs_e rscs_sd_read(rscs_sdcard_t * self, void * buffer, size_t buffer_size);
 
 // =========================================================
 // Уровень команд
