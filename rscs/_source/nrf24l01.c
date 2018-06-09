@@ -17,7 +17,7 @@
 #include "error.h"
 #include "timeservice.h"
 
-#include "nrf24l01.h"
+#include "../nrf24l01.h"
 
 #define R_REG			0x00
 #define W_REG			0x20
