@@ -15,6 +15,7 @@
 #include <stdint.h>
 
 #include "error.h"
+#include "timeservice.h"
 
 #include "nrf24l01.h"
 
@@ -83,6 +84,8 @@
 #define TX_ADDR 		0x10
 
 #define FIFO_STATUS		0x17
+	#define  TX_EMPTY	4
+	#define  RX_EMPTY	0
 
 #define EN_AA			0x01
 
@@ -101,6 +104,8 @@ struct rscs_nrf24l01_bus_t{
 
 	volatile uint8_t * CEPORT; //Chip enable NRF
 	uint8_t CEMASK;
+
+	uint16_t timeout;
 };
 
 static void inline _command(uint8_t com, rscs_nrf24l01_bus_t * bus){
@@ -223,9 +228,15 @@ void rscs_nrf24l01_set_config(rscs_nrf24l01_config_t set, rscs_nrf24l01_bus_t * 
 	_wreg5(TX_ADDR, set.tx.addr, bus);
 	_wreg(CONFIG, config, bus);
 
+	_command(FL_TX, bus);
+	_command(FL_RX, bus);
+	_wreg(STATUS, (1 << RX_DR) | (1 << MAX_RT) | (1 << TX_DS) | (1 << TX_FULL), bus);
+
 	if(set.config.pwr_up) _delay_us(135);
 	if(set.config.prim_rx) chip_en(bus);
 	else chip_dis(bus);
+
+	bus->timeout = set.setup_retr.arc * (set.setup_retr.ard * 250 + 250) + set.setup_retr.arc * 200;
 }
 
 
@@ -261,7 +272,6 @@ void rscs_nrf24l01_set_pipe_config(rscs_nrf24l01_pipe_config_t set, rscs_nrf24l0
 void rscs_nrf24l01_get_status(rscs_nrf24l01_status_t* retval, rscs_nrf24l01_bus_t * bus){
 	uint8_t status = _rreg(STATUS, bus);
 
-	printf("STATUS %u\n", status);
 	retval->max_rt 	= (status >> MAX_RT) & 1;
 	retval->rx_dr 	= (status >> RX_DR) & 1;
 	retval->tx_ds 	= (status >> TX_DS) & 1;
@@ -271,59 +281,91 @@ void rscs_nrf24l01_get_status(rscs_nrf24l01_status_t* retval, rscs_nrf24l01_bus_
 
 uint8_t rscs_nrf24l01_write(rscs_nrf24l01_bus_t * bus, void* data, size_t size){
 	_wreg(STATUS, (1 << MAX_RT) | (1 << TX_DS), bus);
-	_command(FL_TX, bus);
-	_delay_ms(10);
 
-	size = size > 32 ? 32 : size;
 	uint8_t* buf = (uint8_t*)data;
+	size_t writed = 0;
 
 	if(_rreg(CONFIG, bus) & (1 << PRIM_RX)){
-		spi_start(bus);
+		if(_rreg(STATUS, bus) & (1 << TX_FULL)){
+			 _command(FL_RX, bus);
+		}
+		while((size - writed > 0) &&
+				!(_rreg(STATUS, bus) & (1 << TX_FULL))){
+			size_t payload = (size - writed) > 32 ? 32 : size;
 
-		spi_ex(bus, W_ACK_PAY);
-		for(int i = 0; i < size; i++) spi_ex(bus, *(buf + i));
+			spi_start(bus);
 
-		spi_stop(bus);
+			spi_ex(bus, W_ACK_PAY);
+			for(int i = 0; i < payload; i++) spi_ex(bus, *(buf + i));
+
+			spi_stop(bus);
+
+			writed += payload;
+		}
 	}
 	else{
-		spi_start(bus);
-
-		spi_ex(bus, W_TX_PAY);
-		for(int i = 0; i < size; i++) spi_ex(bus, *(buf + i));
-
-		spi_stop(bus);
-
 		chip_en(bus);
-		_delay_us(20);
+
+		while((size - writed > 0) &&
+				!(_rreg(STATUS, bus) & (1 << TX_FULL))){
+			size_t payload = (size - writed) > 32 ? 32 : size;
+
+			spi_start(bus);
+
+			spi_ex(bus, W_TX_PAY);
+			for(int i = 0; i < payload; i++) spi_ex(bus, *(buf + i));
+
+			spi_stop(bus);
+
+			writed += payload;
+		}
+
+		uint32_t sended = rscs_time_get();
+
+		while(!(
+				( _rreg(STATUS, bus) & ((1 << TX_DS) | (1 << MAX_RT)) ) |
+				( _rreg(FIFO_STATUS, bus) & (1 << TX_EMPTY) )
+				)
+				){
+			if((rscs_time_get() - sended) * 1000 > bus->timeout){
+				break;
+			}
+		}
+
 		chip_dis(bus);
+		//_command(FL_TX, bus);
 	}
 
-	return size;
+	return writed;
 }
 
 uint8_t rscs_nrf24l01_read(rscs_nrf24l01_bus_t * bus, void* data){
-	if(!(_rreg(STATUS, bus) & (1 << RX_DR))) return 0;
-	spi_start(bus);
-
-	spi_ex(bus, R_RX_PL_WID);
-	uint8_t width = spi_ex(bus, NOP);
-
-	spi_stop(bus);
-
-	if(width == 0) return 0;
 	uint8_t* buf = (uint8_t*)data;
+	size_t readed = 0;
 
-	spi_start(bus);
+	while((_rreg(STATUS, bus) & (1 << RX_DR))
+			&& !(_rreg(FIFO_STATUS, bus) & (1 << RX_EMPTY))){
+		spi_start(bus);
 
-	spi_ex(bus, R_RX_PAY);
-	for(int i = 0; i < width; i++) *(buf + i) = spi_ex(bus, NOP);
+		spi_ex(bus, R_RX_PL_WID);
+		size_t width = spi_ex(bus, NOP);
 
-	spi_stop(bus);
+		spi_stop(bus);
+
+		spi_start(bus);
+
+		spi_ex(bus, R_RX_PAY);
+		for(int i = 0; i < width; i++) *(buf + i + readed) = spi_ex(bus, NOP);
+
+		spi_stop(bus);
+
+		readed += width;
+	}
 
 	_wreg(STATUS, (1 << RX_DR), bus);
-	_command(FL_RX, bus);
+	//_command(FL_RX, bus);
 
-	return width;
+	return readed;
 }
 
 
@@ -342,6 +384,8 @@ rscs_nrf24l01_bus_t * rscs_nrf24l01_init(uint8_t (*exchange)(uint8_t byte),
 
 	retval->CEPORT = CEPORT;
 	retval->CEMASK = (1 << cepin);
+
+	rscs_time_init();
 
 	return retval;
 }
@@ -461,7 +505,7 @@ uint8_t test(rscs_nrf24l01_bus_t * nrf1){
 	rscs_nrf24l01_get_status(&status, nrf1);
 	info_st(status);
 
-	char f[] = "flash";
+	char f[] = "flush";
 	char c[] = "config";
 	char p[] = "pipe";
 	char s[] = "status";
@@ -472,6 +516,7 @@ uint8_t test(rscs_nrf24l01_bus_t * nrf1){
 		printf("Command\n");
 		char data[64];
 		scanf("%s", data);
+		printf("%s\n", data);
 		if(!strcmp(data, c)) {
 			rscs_nrf24l01_get_config(&set, nrf1);
 			info_nrf(set);
@@ -502,11 +547,10 @@ uint8_t test(rscs_nrf24l01_bus_t * nrf1){
 			}
 		}
 		if(!strcmp(data, dw)){
-			char get[32];
+			char get[128];
 			scanf("%s", get);
-			int size = strnlen(get, 32);
-			rscs_nrf24l01_write(nrf1, get, size);
-			printf("Writed[%d]: %s\n", size, get);
+			int size = strnlen(get, sizeof(get));
+			printf("Writed[%d]: %s\n", rscs_nrf24l01_write(nrf1, get, size), get);
 		}
 	}
 
