@@ -22,8 +22,7 @@ void rscs_spi_init(void)
 			(1 << RSCS_SPI_MOSI) | (1 << RSCS_SPI_SCK) | (1 << RSCS_SPI_SS);
 	RSCS_SPI_PORTX &= ~(1 << RSCS_SPI_MISO);
 
-
-	/*разрешение spi,старший бит вперед,мастер, режим 0*/
+	/*разрешение spi,старший бит вперед, мастер, режим 0*/
 	SPCR = (1 << SPE) | (1 << MSTR);
 
 	rscs_spi_set_clk(1000);
