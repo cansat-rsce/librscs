@@ -308,7 +308,7 @@ uint8_t rscs_nrf24l01_write(rscs_nrf24l01_bus_t * bus, void* data, size_t size){
 
 		while((size - writed > 0) &&
 				!(_rreg(STATUS, bus) & (1 << TX_FULL))){
-			size_t payload = (size - writed) > 32 ? 32 : size;
+			size_t payload = (size - writed) > 32 ? 32 : (size - writed);
 
 			spi_start(bus);
 
@@ -322,14 +322,14 @@ uint8_t rscs_nrf24l01_write(rscs_nrf24l01_bus_t * bus, void* data, size_t size){
 
 		uint32_t sended = rscs_time_get();
 
-		while(!( _rreg(FIFO_STATUS, bus) & (1 << TX_EMPTY))){
+		while(!( _rreg(STATUS, bus) & ((1 << TX_DS) | (1 << MAX_RT)))){
 			if((rscs_time_get() - sended) * 1000 > bus->timeout){
 				break;
 			}
 		}
 
 		chip_dis(bus);
-		//_command(FL_TX, bus);
+		_command(FL_TX, bus);
 	}
 
 	return writed;
