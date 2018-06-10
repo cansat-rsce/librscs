@@ -184,28 +184,31 @@ rscs_adxl345_t * rscs_adxl345_initi2c(rscs_i2c_addr_t addr)
 
 rscs_e rscs_adxl345_startup(rscs_adxl345_t * adxl) {
 	uint8_t devid = 0;
-	adxl->get(adxl, 0x00, &devid,1);
+
+	rscs_e error;
+	GOTO_END_IF_ERROR(adxl->get(adxl, RSCS_ADXL345_DEVID, &devid, 1));
 
 	if(devid !=  229)  {
 		return RSCS_E_INVRESP;
 	}
 
 	//смещение по осям XYZ равно 0 (по умолчанию)
-	adxl->set(adxl, RSCS_ADXL345_OFSX, 0);
-	adxl->set(adxl, RSCS_ADXL345_OFSY, 0);
-	adxl->set(adxl, RSCS_ADXL345_OFSZ, 0);
+	GOTO_END_IF_ERROR(adxl->set(adxl, RSCS_ADXL345_OFSX, 0));
+	GOTO_END_IF_ERROR(adxl->set(adxl, RSCS_ADXL345_OFSY, 0));
+	GOTO_END_IF_ERROR(adxl->set(adxl, RSCS_ADXL345_OFSZ, 0));
 
 	//LOW_POWER off, 100Гц (по умолчанию)
-	adxl->set(adxl, RSCS_ADXL345_BW_RATE, RSCS_ADXL345_RATE_100HZ);
+	GOTO_END_IF_ERROR(adxl->set(adxl, RSCS_ADXL345_BW_RATE, RSCS_ADXL345_RATE_100HZ));
 
-	adxl->set(adxl, RSCS_ADXL345_DATA_FORMAT,
+	GOTO_END_IF_ERROR(adxl->set(adxl, RSCS_ADXL345_DATA_FORMAT,
 			adxl->range			// диапазон
 			| RSCS_ADXL345_FULL_RES	// FULL_RES = 1 (для всех диапазонов использовать максимальное разрешение 4 mg/lsb)
-	);
+	));
 	//переводит акселерометр из режима ожидания в режим измерения
-	adxl->set(adxl, RSCS_ADXL345_POWER_CTL,	RSCS_ADXL345_PCTL_MEASURE);
+	GOTO_END_IF_ERROR(adxl->set(adxl, RSCS_ADXL345_POWER_CTL,	RSCS_ADXL345_PCTL_MEASURE));
 
-	return RSCS_E_NONE;
+end:
+	return error;
 }
 
 
@@ -215,34 +218,39 @@ void rscs_adxl345_deinit(rscs_adxl345_t * device)
 }
 
 
-/* УСТАНОВКА ПРЕДЕЛОВ ИЗМЕРЕНИЙ*/
-void rscs_adxl345_set_range(rscs_adxl345_t * device, rscs_adxl345_range_t range)
+rscs_e rscs_adxl345_set_range(rscs_adxl345_t * device, rscs_adxl345_range_t range)
 {
 	uint8_t data = 0;
 
-	device->get(device, RSCS_ADXL345_DATA_FORMAT, &data, 1);
+	rscs_e error;
+	GOTO_END_IF_ERROR(device->get(device, RSCS_ADXL345_DATA_FORMAT, &data, 1));
 	data &= ~( (1 << 1) | 1 );			//очищаем 2 младших бита регистра BW_RATE
 	data |= RSCS_ADXL345_RANGE(range);	//и записываем новое значение
-	device->set(device, RSCS_ADXL345_DATA_FORMAT, data);
+	GOTO_END_IF_ERROR(device->set(device, RSCS_ADXL345_DATA_FORMAT, data));
 
 	device->range = range;
+
+end:
+	return error;
 }
 
 
-/* УСТАНОВКА ЧАСТОТЫ ИЗМЕРЕНИЙ*/
-void rscs_adxl345_set_rate(rscs_adxl345_t * device, rscs_adxl345_rate_t rate)
+rscs_e rscs_adxl345_set_rate(rscs_adxl345_t * device, rscs_adxl345_rate_t rate)
 {
 	uint8_t data = 0;
 
-	device->get(device, RSCS_ADXL345_BW_RATE, &data, 1);
+	rscs_e error;
+	GOTO_END_IF_ERROR(device->get(device, RSCS_ADXL345_BW_RATE, &data, 1));
 	data &= ~(0xF);						//очищаем 4 младших бита регистра BW_RATE
 	data |= RSCS_ADXL345_RATE(rate);	//и записываем новое значение
-	device->set(device, RSCS_ADXL345_BW_RATE, data);
+	GOTO_END_IF_ERROR(device->set(device, RSCS_ADXL345_BW_RATE, data));
+
+end:
+	return error;
 }
 
 
-/* УСТАНОВКА СМЕЩЕНИЯ РЕЗУЛЬТАТОВ ПО ОСЯМ X, Y, Z*/
-void rscs_adxl345_set_offset(rscs_adxl345_t * device, float mg_x, float mg_y, float mg_z)
+rscs_e rscs_adxl345_set_offset(rscs_adxl345_t * device, float mg_x, float mg_y, float mg_z)
 {
 	int8_t ofs_x;
 	int8_t ofs_y;
@@ -252,23 +260,29 @@ void rscs_adxl345_set_offset(rscs_adxl345_t * device, float mg_x, float mg_y, fl
 	ofs_y = (int8_t) round(mg_y / RSCS_ADXL345_OFFSET_SCALE_FACTOR);
 	ofs_z = (int8_t) round(mg_z / RSCS_ADXL345_OFFSET_SCALE_FACTOR);
 
-	device->set(device, RSCS_ADXL345_OFSX, ofs_x);
-	device->set(device, RSCS_ADXL345_OFSX, ofs_y);
-	device->set(device, RSCS_ADXL345_OFSX, ofs_z);
+	rscs_e error;
+	GOTO_END_IF_ERROR(device->set(device, RSCS_ADXL345_OFSX, ofs_x));
+	GOTO_END_IF_ERROR(device->set(device, RSCS_ADXL345_OFSX, ofs_y));
+	GOTO_END_IF_ERROR(device->set(device, RSCS_ADXL345_OFSX, ofs_z));
 
+end:
+	return error;
 }
 
 
-/* ЧТЕНИЕ ДАННЫХ ADXL345 В БИНАРНОМ ВИДЕ*/
-void rscs_adxl345_read(rscs_adxl345_t * device, int16_t * x, int16_t * y, int16_t * z)
+rscs_e rscs_adxl345_read(rscs_adxl345_t * device, int16_t * x, int16_t * y, int16_t * z)
 {
 	uint8_t readBuffer[6]   = {0};
 
-	device->get(device, RSCS_ADXL345_DATAX0, readBuffer, 6);
+	rscs_e error;
+	GOTO_END_IF_ERROR(device->get(device, RSCS_ADXL345_DATAX0, readBuffer, 6));
 
 	*x = (readBuffer[1] << 8) | readBuffer[0];
 	*y = (readBuffer[3] << 8) | readBuffer[2];
 	*z = (readBuffer[5] << 8) | readBuffer[4];
+
+end:
+	return error;
 }
 
 
@@ -280,12 +294,16 @@ void rscs_adxl345_cast_to_G(rscs_adxl345_t * device, int16_t x, int16_t y, int16
 }
 
 
-void rscs_adxl345_GetGXYZ(rscs_adxl345_t * device, int16_t* x, int16_t* y, int16_t* z, float* x_g, float* y_g, float* z_g)
+rscs_e rscs_adxl345_GetGXYZ(rscs_adxl345_t * device, int16_t* x, int16_t* y, int16_t* z, float* x_g, float* y_g, float* z_g)
 {
 	*x = 0;
 	*y = 0;
 	*z = 0;
 
-	rscs_adxl345_read(device, x, y, z);
+	rscs_e error;
+	GOTO_END_IF_ERROR(rscs_adxl345_read(device, x, y, z));
 	rscs_adxl345_cast_to_G(device, *x, *y, *z, x_g, y_g, z_g);
+
+end:
+	return error;
 }

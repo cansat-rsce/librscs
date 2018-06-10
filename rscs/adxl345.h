@@ -76,11 +76,11 @@ void rscs_adxl345_deinit(rscs_adxl345_t * device);
 
 // установка пределов измерения
 /* в случае ошибки взаимодействия по I2C возвращает код ошибки */
-void rscs_adxl345_set_range(rscs_adxl345_t * device, rscs_adxl345_range_t range);
+rscs_e rscs_adxl345_set_range(rscs_adxl345_t * device, rscs_adxl345_range_t range);
 
 // установка частоты измерений
 /* в случае ошибки взаимодействия по I2C возвращает код ошибки */
-void rscs_adxl345_set_rate(rscs_adxl345_t * device, rscs_adxl345_rate_t rate);
+rscs_e rscs_adxl345_set_rate(rscs_adxl345_t * device, rscs_adxl345_rate_t rate);
 
 // Чтение данных
 /*	Это сырые данные в том виде, в каком они прочитанны из регистров акселерометра
@@ -94,13 +94,13 @@ void rscs_adxl345_set_rate(rscs_adxl345_t * device, rscs_adxl345_rate_t rate);
 
  	 в случае ошибки взаимодействия по I2C возвращает код ошибки
 */
-void  rscs_adxl345_read(rscs_adxl345_t * device, int16_t * x, int16_t * y, int16_t * z);
+rscs_e rscs_adxl345_read(rscs_adxl345_t * device, int16_t * x, int16_t * y, int16_t * z);
 
 // Перевод сырых данных акселерометра в G
 void rscs_adxl345_cast_to_G(rscs_adxl345_t * device, int16_t x, int16_t y, int16_t z, float * x_g, float * y_g, float * z_g);
 
 /* ЧТЕНИЕ ДАННЫХ ADXL345 В БИНАРНОМ ВИДЕ И ПРЕОБРАЗОВАНИЕ В ЕДИНИЦЫ g */
-void  rscs_adxl345_GetGXYZ(rscs_adxl345_t * device, int16_t* x, int16_t* y, int16_t* z, float* x_g, float* y_g, float* z_g);
+rscs_e rscs_adxl345_GetGXYZ(rscs_adxl345_t * device, int16_t* x, int16_t* y, int16_t* z, float* x_g, float* y_g, float* z_g);
 
 
 #endif /* ADXL345_H_ */
