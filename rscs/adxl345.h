@@ -1,12 +1,11 @@
-#ifndef RSCS_ADXL345_H_
-#define RSCS_ADXL345_H_
+#ifndef ADXL345_H_
+#define ADXL345_H_
 
 #include <stdint.h>
 #include <avr/io.h>	//ВРЕМЕННО
 
-#include "i2c.h"
-
 #include "error.h"
+#include "i2c.h"
 
 /*
 	модуль работы с акселерометром ADXL375 через интерфейс I2C
@@ -65,11 +64,8 @@ typedef enum
 } rscs_adxl345_rate_t;
 
 
-rscs_e rscs_adxl345_getRegisterValue(rscs_adxl345_t * device, uint8_t registerAddress, uint8_t * read_data);
+rscs_adxl345_t* rscs_adxl345_initspi(volatile uint8_t * CSPORT, uint8_t CSPIN);
 
-// Функции инициализации дескриптора (для разных интерфейсов)
-/*	Параметры:
-	- addr - адрес устройства на шине. Зависит от значения на ножке акселерометра ALT ADDRESS */
 rscs_adxl345_t * rscs_adxl345_initi2c(rscs_i2c_addr_t addr);
 
 // первичная настройка (обязательна к использованию сразу после rscs_adxl345_initi2c())
@@ -107,4 +103,4 @@ void rscs_adxl345_cast_to_G(rscs_adxl345_t * device, int16_t x, int16_t y, int16
 rscs_e rscs_adxl345_GetGXYZ(rscs_adxl345_t * device, int16_t* x, int16_t* y, int16_t* z, float* x_g, float* y_g, float* z_g);
 
 
-#endif /* RSCS_ADXL345_H_ */
+#endif /* ADXL345_H_ */
