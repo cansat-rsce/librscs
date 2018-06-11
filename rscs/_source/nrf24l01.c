@@ -312,7 +312,7 @@ uint8_t rscs_nrf24l01_write(rscs_nrf24l01_bus_t * bus, void* data, size_t size){
 			spi_start(bus);
 
 			spi_ex(bus, W_TX_PAY);
-			for(uint8_t i = 0; i < payload; i++) spi_ex(bus, *(buf + i));
+			for(uint8_t i = 0; i < payload; i++) spi_ex(bus, *(buf +  writed + i));
 
 			spi_stop(bus);
 
@@ -322,14 +322,11 @@ uint8_t rscs_nrf24l01_write(rscs_nrf24l01_bus_t * bus, void* data, size_t size){
 
 				if(status & (1 << TX_DS)){
 					writed += payload;
-					printf("TX_DS\n");
 					break;
 				}
 
 				if((status & (1 << MAX_RT)) || (rscs_time_get() - sended) * 1000 > bus->timeout){
 					stop = true;
-					if(status & (1 << MAX_RT)) printf("MAX_RT\n");
-					else printf("TIMEOUT\n");
 					break;
 				}
 			}
