@@ -57,40 +57,50 @@ static rscs_e _await(rscs_iridium_t* iridium, const char* trigger, const char* d
 			}
 		}
 	}
-	else{
-
-	}
 	return RSCS_E_BUSY;
 }
 
-#define RETIFE(OP) rscs_e error = OP; if(error) return error
+#define BRIFE(OP) error = OP; if(error) break
 
 rscs_e rscs_iridium_check(rscs_iridium_t* iridium){
+	rscs_e error = RSCS_E_NONE;
+
 	switch(iridium->last){
 	case SBDIX: case SBDWBD: case SBDWBS: return RSCS_E_INVARG;
 	case NOP:
 	{
+		iridium->last = AT;
+
 		char buf[] = "AT\r\n";
 		rscs_uart_write(iridium->uart, buf, strlen(buf));
-		iridium->last = AT;
+
+		iridium->time = rscs_time_get();
 	}
 		break;
 	case AT:
 	{
-		RETIFE(_await(iridium, "OK", "\r\n", NULL));
+		BRIFE(_await(iridium, "OK", "\r\n", NULL));
 		iridium->last = NOP;
-
-		return RSCS_E_NONE;
 	}
 		break;
 	}
-	return RSCS_E_BUSY;
+
+	if(rscs_time_get() - iridium->time > RSCS_IRIDIUM9602_TIMEOUT_MS && error){
+		iridium->carret = 0;
+		iridium->last = NOP;
+
+		return RSCS_E_TIMEOUT;
+	}
+
+	return error;
 }
 
 
 rscs_e rscs_iridium9602_write_bytes(rscs_iridium_t* iridium, void* data, size_t datasize){
+	rscs_e error = RSCS_E_NONE;
+
 	switch(iridium->last){
-	case AT: return RSCS_E_INVARG;
+	case AT: case SBDIX: case SBDWT: return RSCS_E_INVARG;
 	case NOP:
 	{
 		iridium->last = SBDWBS;
@@ -104,7 +114,7 @@ rscs_e rscs_iridium9602_write_bytes(rscs_iridium_t* iridium, void* data, size_t 
 		//break;
 	case SBDWBS:
 	{
-		RETIFE(_await(iridium, "READY", "\r\n", NULL));
+		BRIFE(_await(iridium, "READY", "\r\n", NULL));
 		iridium->last = SBDWBD;
 
 		rscs_uart_write(iridium->uart, data, datasize);
@@ -113,39 +123,28 @@ rscs_e rscs_iridium9602_write_bytes(rscs_iridium_t* iridium, void* data, size_t 
 
 		iridium->time = rscs_time_get();
 	}
-		break;
+		//break;
 	case SBDWBD:
 	{
-		RETIFE(_await(iridium, "OK", "\r\n", NULL));
-		iridium->last = SBDIX;
-
-		char buf[] = "AT+SBDIX\r\n";
-		rscs_uart_write(iridium->uart, buf, strlen(buf));
-
-		iridium->time = rscs_time_get();
-	}
-		//break;
-	case SBDIX:
-	{
-		RETIFE(_await(iridium, "OK", "\r\n", NULL));
+		BRIFE(_await(iridium, "OK", "\r\n", NULL));
 		iridium->last = NOP;
-
-		return RSCS_E_NONE;
 	}
 		break;
 	}
 
-	if(rscs_time_get() - iridium->time > RSCS_IRIDIUM9602_TIMEOUT_MS){
+	if(rscs_time_get() - iridium->time > RSCS_IRIDIUM9602_TIMEOUT_MS && error){
 		iridium->carret = 0;
 		iridium->last = NOP;
 
 		return RSCS_E_TIMEOUT;
 	}
 
-	return RSCS_E_BUSY;
+	return error;
 }
 
 rscs_e rscs_iridium9602_write_text(rscs_iridium_t* iridium, char* str){
+	rscs_e error = RSCS_E_NONE;
+
 	switch(iridium->last){
 	case AT: case SBDWBS: case SBDWBD: return RSCS_E_INVARG;
 	case NOP:
@@ -161,7 +160,29 @@ rscs_e rscs_iridium9602_write_text(rscs_iridium_t* iridium, char* str){
 		//break;
 	case SBDWT:
 	{
-		RETIFE(_await(iridium, "OK", "\r\n", NULL));
+		BRIFE(_await(iridium, "OK", "\r\n", NULL));
+		iridium->last = NOP;
+	}
+		break;
+	}
+
+	if(rscs_time_get() - iridium->time > RSCS_IRIDIUM9602_TIMEOUT_MS && error){
+		iridium->carret = 0;
+		iridium->last = NOP;
+
+		return RSCS_E_TIMEOUT;
+	}
+
+	return error;
+}
+
+rscs_e rscs_iridium9602_send(rscs_iridium_t* iridium){
+	rscs_e error = RSCS_E_NONE;
+
+	switch(iridium->last){
+	case AT: case SBDWT: case SBDWBS: case SBDWBD: return RSCS_E_INVARG;
+	case NOP:
+	{
 		iridium->last = SBDIX;
 
 		char buf[] = "AT+SBDIX\r\n";
@@ -172,22 +193,20 @@ rscs_e rscs_iridium9602_write_text(rscs_iridium_t* iridium, char* str){
 		//break;
 	case SBDIX:
 	{
-		RETIFE(_await(iridium, "OK", "\r\n", NULL));
+		BRIFE(_await(iridium, "OK", "\r\n", NULL));
 		iridium->last = NOP;
-
-		return RSCS_E_NONE;
 	}
 		break;
 	}
 
-	if(rscs_time_get() - iridium->time > RSCS_IRIDIUM9602_TIMEOUT_MS){
+	if(rscs_time_get() - iridium->time > RSCS_IRIDIUM9602_TIMEOUT_MS && error){
 		iridium->carret = 0;
 		iridium->last = NOP;
 
 		return RSCS_E_TIMEOUT;
 	}
 
-	return RSCS_E_BUSY;
+	return error;
 }
 
 rscs_iridium_t* rscs_iridium9602_init(rscs_uart_id_t uid){
