@@ -307,14 +307,14 @@ uint8_t rscs_nrf24l01_write(rscs_nrf24l01_bus_t * bus, void* data, size_t size){
 
 			_wreg(STATUS, (1 << MAX_RT) | (1 << TX_DS), bus);
 
+			chip_en(bus);
+
 			spi_start(bus);
 
 			spi_ex(bus, W_TX_PAY);
 			for(uint8_t i = 0; i < payload; i++) spi_ex(bus, *(buf + i));
 
 			spi_stop(bus);
-
-			chip_en(bus);
 
 			uint32_t sended = rscs_time_get();
 			while(1){
