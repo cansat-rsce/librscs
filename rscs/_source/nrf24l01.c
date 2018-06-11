@@ -236,7 +236,7 @@ void rscs_nrf24l01_set_config(rscs_nrf24l01_config_t set, rscs_nrf24l01_bus_t * 
 	if(set.config.prim_rx) chip_en(bus);
 	else chip_dis(bus);
 
-	bus->timeout = set.setup_retr.arc * (set.setup_retr.ard * 250 + 250) + set.setup_retr.arc * 200;
+	bus->timeout = ((set.setup_retr.ard + 1) * 250 + 2000) * set.setup_retr.arc;
 }
 
 
@@ -280,18 +280,14 @@ void rscs_nrf24l01_get_status(rscs_nrf24l01_status_t* retval, rscs_nrf24l01_bus_
 }
 
 uint8_t rscs_nrf24l01_write(rscs_nrf24l01_bus_t * bus, void* data, size_t size){
-	_wreg(STATUS, (1 << MAX_RT) | (1 << TX_DS), bus);
-
 	uint8_t* buf = (uint8_t*)data;
 	size_t writed = 0;
 
 	if(_rreg(CONFIG, bus) & (1 << PRIM_RX)){
-		if(_rreg(STATUS, bus) & (1 << TX_FULL)){
-			 _command(FL_RX, bus);
-		}
-		while((size - writed > 0) &&
-				!(_rreg(STATUS, bus) & (1 << TX_FULL))){
-			size_t payload = (size - writed) > 32 ? 32 : size;
+		_wreg(STATUS, (1 << MAX_RT) | (1 << TX_DS), bus);
+
+		while(size - writed > 0){
+			size_t payload = (size - writed) > 32 ? 32 : (size - writed);
 
 			spi_start(bus);
 
@@ -304,32 +300,44 @@ uint8_t rscs_nrf24l01_write(rscs_nrf24l01_bus_t * bus, void* data, size_t size){
 		}
 	}
 	else{
-		chip_en(bus);
+		bool stop = false;
 
-		while((size - writed > 0) &&
-				!(_rreg(STATUS, bus) & (1 << TX_FULL))){
+		while((size - writed) > 0 && !stop){
 			size_t payload = (size - writed) > 32 ? 32 : (size - writed);
+
+			_wreg(STATUS, (1 << MAX_RT) | (1 << TX_DS), bus);
 
 			spi_start(bus);
 
 			spi_ex(bus, W_TX_PAY);
-			for(int i = 0; i < payload; i++) spi_ex(bus, *(buf + i));
+			for(uint8_t i = 0; i < payload; i++) spi_ex(bus, *(buf + i));
 
 			spi_stop(bus);
 
-			writed += payload;
-		}
+			chip_en(bus);
 
-		uint32_t sended = rscs_time_get();
+			uint32_t sended = rscs_time_get();
+			while(1){
+				uint8_t status = _rreg(STATUS, bus);
 
-		while(!( _rreg(STATUS, bus) & ((1 << TX_DS) | (1 << MAX_RT)))){
-			if((rscs_time_get() - sended) * 1000 > bus->timeout){
-				break;
+				if(status & (1 << TX_DS)){
+					writed += payload;
+					printf("TX_DS\n");
+					break;
+				}
+
+				if((status & (1 << MAX_RT)) || (rscs_time_get() - sended) * 1000 > bus->timeout){
+					stop = true;
+					if(status & (1 << MAX_RT)) printf("MAX_RT\n");
+					else printf("TIMEOUT\n");
+					break;
+				}
 			}
-		}
 
-		chip_dis(bus);
-		_command(FL_TX, bus);
+			chip_dis(bus);
+
+			_command(FL_TX, bus);
+		}
 	}
 
 	return writed;
