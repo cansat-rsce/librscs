@@ -117,7 +117,12 @@ rscs_e rscs_iridium9602_write_bytes(rscs_iridium_t* iridium, void* data, size_t 
 		BRIFE(_await(iridium, "READY", "\r\n", NULL));
 		iridium->last = SBDWBD;
 
+		uint16_t checksum = 0;
+		for(int i = 0; i < datasize; i++) checksum += *((uint8_t*)data + i);
+
 		rscs_uart_write(iridium->uart, data, datasize);
+		checksum = (checksum >> 8) | (checksum << 8);
+		rscs_uart_write(iridium->uart, &checksum, sizeof(checksum));
 		char buf[] = "\r\n";
 		rscs_uart_write(iridium->uart, buf, strlen(buf));
 
