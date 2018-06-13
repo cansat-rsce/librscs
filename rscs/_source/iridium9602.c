@@ -97,6 +97,8 @@ rscs_e rscs_iridium_check(rscs_iridium_t* iridium){
 
 
 rscs_e rscs_iridium9602_write_bytes(rscs_iridium_t* iridium, void* data, size_t datasize){
+	if(datasize < 1) return RSCS_E_INVARG;
+
 	rscs_e error = RSCS_E_NONE;
 
 	switch(iridium->last){
