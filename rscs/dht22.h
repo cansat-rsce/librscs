@@ -44,6 +44,13 @@ rscs_dht22_t *  rscs_dht22_init(volatile uint8_t * PORTREG,
 								uint8_t PIN,
 								float signal_time_divisor);
 
+
+// Деинициализация DHT22.
+/* Просто делает free() дескриптора. Датчик не имеет энергосберегающих режимов, как
+ * и вообще какого-либо управления.
+ * */
+void rscs_dht22_deinit(rscs_dht22_t * dht);
+
 // Получение данных от DHT22
 /*
  Длительность обмена ~5мс
