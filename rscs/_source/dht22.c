@@ -29,6 +29,11 @@ rscs_dht22_t *  rscs_dht22_init(volatile uint8_t * PORTREG, volatile uint8_t * P
 	return dht;
 }
 
+void rscs_dht22_deinit(rscs_dht22_t * dht)
+{
+	free(dht);
+}
+
 
 inline static void _set_bus_zero(rscs_dht22_t * dht)
 {
