@@ -289,7 +289,6 @@ rscs_e rscs_sd_startup(rscs_sdcard_t * self)
 
 	// все, карта готова
 end:
-	printf("sd_startup_leave, err = %d\n", error);
 	rscs_sd_cs(self, false);
 	return error;
 }
